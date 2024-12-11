@@ -7,9 +7,7 @@ The repository is structured as follows:
 Basic demographic information and visualization of survey variables
 Reddit metrics (internal and external) 
 
-[`01-sample-descriptives.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/01-sample-descriptives.Rmd) [html](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/01-sample-descriptives.html)
-
-see compiled html [here](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/01-sample-descriptives.html)
+[`01-sample-descriptives.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/01-sample-descriptives.Rmd) / [`01-sample-descriptives.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/01-sample-descriptives.html)
 
 ## RQ1 - Prediction of participation
 
