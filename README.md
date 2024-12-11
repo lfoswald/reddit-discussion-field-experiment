@@ -9,7 +9,7 @@ Reddit metrics (internal and external)
 
 `01-sample-descriptives.Rmd`
 
-see compiled html [here](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/01-sample-descriptives.html)
+see compiled html [here](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/01-sample-descriptives.html)
 
 ## RQ1 - Prediction of participation
 
