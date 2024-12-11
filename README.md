@@ -1,6 +1,7 @@
 # Reddit Political Discussion Field Experiment
 
-This repository contains replication materials for the political discussion field experiment, led by Lisa Oswald in summer 2024 (see also associated [OSF project](https://osf.io/m8g4x/)).
+This repository contains replication materials for the political discussion field experiment, fielded in summer 2024 (see also associated [OSF project](https://osf.io/m8g4x/)).
+
 The repository is structured as follows:
 
 ## Sample descriptives 
