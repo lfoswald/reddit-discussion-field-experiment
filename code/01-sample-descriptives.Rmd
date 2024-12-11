@@ -1,0 +1,830 @@
+---
+title: "Sample & Descriptives"
+subtitle: "Reddit Communities Field Experiment"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, out.width = "100%", out.height = "30%", message=F, warning=F)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(gridExtra)
+library(haven)
+library(RColorBrewer)
+library(igraph)
+library(kableExtra)
+library(ggridges)
+```
+
+Load anonymous data (no comment texts, open comments, usernames or email addresses)
+```{r , results='hide'}
+# reddit data
+discussion_data <- read_csv("../data/anon/discussions_anon.csv")
+external_data <- read_csv("../data/anon/external_reddit_anon.csv")
+user_data <-  read_csv("../data/anon/users_anon.csv")
+
+# survey data
+pre_survey <- read_csv("../data/anon/pre_survey_anon.csv")
+post_surveys <- read_csv("../data/anon/post_surveys_anon.csv")
+```
+
+Combine survey and reddit data
+```{r}
+## Reddit metrics by user - add to sample
+
+user_comments <- discussion_data%>%
+  group_by(ParticipantID)%>%
+  mutate(comment_count = n(),
+         comment_mean_score = round(mean(score_comment,na.rm=T),3),
+         comment_mean_tox = round(mean(comment_toxicity,na.rm=T),3),
+         comment_mean_lenght = round(mean(length_comment_char,na.rm=T),3))%>%
+  slice(1)%>%
+  select(ParticipantID,comment_count,comment_mean_lenght,comment_mean_score,comment_mean_tox)
+
+user_comments_external <- external_data%>%
+  group_by(ParticipantID)%>%
+  mutate(ex_comment_count = n(),
+         ex_comment_mean_score = round(mean(score_comment,na.rm=T),3),
+         ex_comment_mean_tox = round(mean(comment_toxicity,na.rm=T),3),
+         ex_comment_mean_lenght = round(mean(length_comment_char,na.rm=T),3))%>%
+  slice(1)%>%
+  select(ParticipantID,ex_comment_count,ex_comment_mean_score,ex_comment_mean_tox,ex_comment_mean_lenght)
+
+sample <- pre_survey%>%
+  filter(on_reddit == 1)%>%
+  left_join(., user_data, by = "ParticipantID")%>%
+  left_join(., user_comments, by = "ParticipantID")%>%
+  left_join(., user_comments_external, by = "ParticipantID")
+
+write_csv(sample, file = "../data/anon/sample_anon.csv")   
+```
+
+## Comment activity per user
+```{r, fig.width=12, fig.height=5}
+# comments per user
+part1 <- sample%>%
+  mutate(comment_count = ifelse(is.na(comment_count),0,comment_count))%>%
+  ggplot()+
+  geom_bar(aes(comment_count), fill = "#6699FF")+
+  theme_bw()+
+  ylab("Number of users")+
+  xlab("Number of comments per user")+
+  labs(title = "Comment activity", subtitle = paste0("20 discussion issues | N(comments) = ", 
+                                                     nrow(discussion_data), " | N(users) = ", nrow(sample)))+
+  annotate(geom = "text", x = 20, hjust = 0,  y = 200, label = paste0("min = ",min(sample$comment_count,na.rm=T)))+
+  annotate(geom = "text", x = 20, hjust = 0, y = 180, label = paste0("max = ",max(sample$comment_count,na.rm=T)))
+
+any_check <- post_surveys%>%
+  group_by(ParticipantID)%>%
+  mutate(any_checkin = 1)%>%
+  slice(1)%>%
+  pull(ParticipantID)
+
+sample%>% mutate(active = ifelse(is.na(comment_count),"no","yes"),
+         active = ifelse(!ParticipantID %in% any_check & active == "no", "inactive", active))%>%count(active)
+
+bars <- sample%>%
+  mutate(active = ifelse(is.na(comment_count),"no","yes"),
+         active = ifelse(!ParticipantID %in% any_check & active == "no", "inactive", active))%>%
+  ggplot()+
+  geom_bar(aes(factor(active)), fill = c("darkgrey","lightgrey","#6699FF"))+
+  xlab("Wrote any comment")+
+  ylab("")+
+  annotate(geom = "text", x = "inactive",   y = 87, label = "97")+
+  annotate(geom = "text", x = "no",   y = 82, label = "92")+
+  annotate(geom = "text", x = "yes",   y = 321, label = "331")+
+  theme_bw()
+  
+histog <- ggplot(sample)+
+  geom_bar(aes(comment_count), fill = "#6699FF")+
+  xlab("Comments written in experiment")+
+  ylab("Number of users")+
+  theme_bw()
+
+dots <- ggplot(sample)+
+  geom_point(aes(comment_count, log(comment_karma+1), colour = comment_mean_tox, 
+                 size = comment_mean_lenght), alpha = 0.8)+
+  #geom_smooth(method="lm", aes(comment_count,comment_mean_tox))+
+  scale_colour_gradient(low = "#6699FF", high = "black")+
+  xlab("Comments written in experiment")+
+  ylab("Comment karma on Reddit (log-scale)")+
+  theme_bw()+
+  guides(colour = guide_legend(title="Toxicity"), size = guide_legend(title="Length"))
+
+combi2 <- grid.arrange(bars, histog, widths = c(3,4.5), top = "User level discussion participation")
+
+ggsave("../output/participation_dots.pdf", dots, width = 5, height = 4)
+ggsave("../output/participation_total2.pdf", combi2, width = 6, height = 3)
+```
+
+
+# Survey Sample 
+
+## Demographics 
+```{r, fig.width=12, fig.height=4}
+#(1 = Man, 2 = Woman, 3 = Other)
+table(sample$gender)
+
+table(sample$condition)
+table(sample$subreddit)
+
+ageplot <- ggplot(sample)+
+  geom_histogram(aes(age), fill = "#6699FF")+
+  theme_bw()+ 
+  ylab("Sample: Participants who joined subreddit")+
+  xlab(paste0("Age in years (M = ",round(mean(sample$age),2),", SD = ",round(sd(sample$age),2),")"))+
+  annotate(geom="text", x=60, y=30,hjust = 0, label= paste("Male: ",table(sample$gender)[1]))+
+  annotate(geom="text", x=60, y=28,hjust = 0, label= paste("Female: ",table(sample$gender)[2]))+
+  annotate(geom="text", x=60, y=26,hjust = 0, label= paste("Other: ",table(sample$gender)[3]))+
+  annotate(geom="text", x=60, y=33,hjust = 0, label= paste("N: ", nrow(sample)),fontface =2)
+
+educplot <- ggplot(sample)+
+  geom_bar(aes(education), fill = "#6699FF")+
+  coord_flip()+
+  ylab("")+
+  xlab("Level of formal education")+
+  theme_bw()+
+  annotate(geom="text", x = 1, y = 0, hjust = 0,  label = "No degree")+
+  annotate(geom="text", x = 2, y = 0, hjust = 0, label = "High school")+
+  annotate(geom="text", x = 3, y = 0, hjust = 0, label = "Some college education, no degree")+
+  annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Bachelor's degree")+
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Some postgraduate education, no degree")+
+  annotate(geom="text", x = 6, y = 0, hjust = 0, label = "Postgraduate degree")
+
+demo <- grid.arrange(ageplot, educplot, nrow = 1,
+                     top = "Age and education across study sample")
+
+ggsave("../output/demographics.pdf",demo, width = 10, height = 5)
+```
+## Political variables pre-survey 
+```{r, fig.width=12, fig.height=4}
+int <- ggplot(sample, aes(polinterest))+
+  geom_bar(fill = "#6699FF")+
+  ggtitle("Political Interest")+
+  xlab("")+
+  ylab("")+
+  theme_bw()+
+  xlim("Not interested", "Sighly interested","Moderately interested", "Very interested")
+
+pol <- ggplot(sample)+
+  geom_bar(aes(x = leftright, fill = ..x..))+
+  theme_bw()+
+  scale_fill_gradient2(low='#6699ff', mid='lightgrey', high='#bc3455', midpoint=6)+
+  ggtitle("Political Orientation")+
+  xlab("")+
+  ylab("")+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
+  xlim("far left", "", "", "", "", "", "", "",
+       "", "", "far right")
+
+polint <- grid.arrange(int, pol, nrow = 1)
+
+ggsave("../output/pol_lefright.pdf", polint, width = 12 , height = 5) 
+ggsave("../output/lefright.pdf", pol, width = 4 , height = 4)
+```
+
+# Reddit Data
+
+## Engagement metrics by political issue 
+```{r, echo = F}
+discussion_data%>%
+  mutate(Issue = post_title)%>%
+  group_by(Issue)%>%
+  summarise(Toxicity = round(mean(comment_toxicity, na.rm = T),3),
+          Comments = n(),
+          Views = sum(unique(total_views), na.rm = T))%>%
+  group_by(Issue)%>%
+  slice(1)%>%
+  arrange(desc(Toxicity))%>%
+  kbl(format = "html", booktabs = TRUE)
+
+# note: one climate change post had NA views
+```
+## Toxicity distributions by political issue
+```{r, fig.height=6, fig.width=12}
+issue_order <- discussion_data%>%
+  group_by(post_title)%>%
+  summarise(Toxicity = round(mean(comment_toxicity, na.rm = T),3))%>%
+  arrange(desc(Toxicity))%>%
+  pull(post_title)
+
+discussion_data$issues <- factor(discussion_data$post_title, levels = issue_order)
+
+colour_values <- c("#6699ff", "#729dee", "#7ca1dd", "#86a5cc", "#91a9bb", "#9bada9", "#a6b298", "#d3d3d3", "#bfc7c7", "#b5b1b1", "#ab9b9b", "#a18585", "#976f6f", "#8d5959", "#844444", "#7b3232", "#732525", "#6a1a1a", "#621010", "#bc3455")
+
+issues <- c("US foreign policy toward Israel and Gaza","Legality of prostitution", "Use of gender-neutral language and pronouns", "Death penalty reestablishment in the US", "US financial and military aid to Ukraine", "Gun control laws", "Impact of social media on democracy", "Immigration regulation", "Ban on fur clothing","Police accountability and body cameras", "Climate change and environmental threats","Mandatory vaccination policies by employers", "Universal healthcare responsibility","Government forgiveness of student loan debt", "Artificial intelligence replacing human labor", "Vegetarian food policies in public cantines", "Economic impact of universal basic income",  "Federal minimum wage increase", "Government investment in renewable energy", "Regulation of Airbnb in cities")
+
+# colours, means
+tox_ridge <- ggplot(discussion_data)+
+  geom_density_ridges(aes(x = comment_toxicity, y = fct_rev(issues), fill = fct_rev(issues), 
+                          alpha = 0.5))+
+  theme(legend.position = "bottom", legend.direction="vertical", 
+        legend.title = element_blank())+
+  guides(alpha = "none")+
+  ylab("")+
+  xlab("")+
+  scale_y_discrete(labels = rev(issues))+
+  theme_ridges() + 
+  scale_fill_manual(values = colour_values) +
+  scale_x_continuous(limits = c(0, 0.6))+
+  theme(legend.position = "none")
+tox_ridge
+
+ggsave("../output/toxicity_issues_ridges.pdf", tox_ridge, width = 10, height = 6)
+```
+## Reddit mertrics over time
+
+```{r, fig.height=4, fig.width=12}
+views <- discussion_data%>%
+  group_by(subreddit,date(created_post))%>%
+  slice(1)%>%
+  ggplot(aes(x = date(created_post), y = total_views, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.3)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  guides(color = "none")+
+  ggtitle("Views per post")+
+  xlab("Date")
+
+comments <- discussion_data%>%
+  group_by(subreddit,date(created_post))%>%
+  slice(1)%>%
+  ggplot(aes(x = date(created_post), y = `Collected comments`, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.3)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  guides(color = "none")+
+  ggtitle("Comments per post")+
+  xlab("Date")
+
+comments_views <- discussion_data%>%
+  mutate(comments_per_views = `Collected comments`/total_views)%>%
+  group_by(subreddit,date(created_post))%>%
+  slice(1)%>%
+  ggplot(aes(x = date(created_post), y = comments_per_views, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.3)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  ggtitle("Comments/views ratio")+
+  xlab("Date")
+
+activity_combi <- grid.arrange(views, comments, comments_views, nrow=1, widths = c(3,3,4))
+
+ggsave("../output/comments_views.pdf", activity_combi, width = 14, height = 5)
+
+```
+```{r, fig.height=4, fig.width=12}
+toxicity <- ggplot(discussion_data, aes(x = date(created_post), y = comment_toxicity, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.1)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  guides(color = "none")+
+  ggtitle("Comment toxicity")+
+  xlab("Date")
+
+length <- ggplot(discussion_data, aes(x = date(created_post), y = length_comment_char, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.1)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  guides(color = "none")+
+  ggtitle("Comment length")+
+  xlab("Date")
+
+score <- discussion_data%>%
+  group_by(subreddit,date(created_post))%>%
+  mutate(score_views = score_post/total_views)%>%
+  slice(1)%>%
+  ggplot(aes(x = date(created_post), y = score_views, color = subreddit))+
+  geom_smooth(method = loess,alpha=0.1)+
+  geom_point(alpha = 0.3)+
+  theme_bw()+
+  scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
+  ylab("")+
+  ggtitle("Post score/views ratio")+
+  xlab("Date")
+
+characteristics_combi <- grid.arrange(toxicity, length, score, nrow=1, widths = c(3,3,4))
+
+ggsave("../output/characteristics_combi.pdf", characteristics_combi, width = 14, height = 5)
+
+```
+
+### Reddit activity by users - internal vs. external
+```{r, fig.width=12, fig.height=5}
+comments_tox <- ggplot(sample,aes(x = comment_mean_tox, y = ex_comment_mean_tox, size = comment_count))+
+  geom_point(alpha = 0.5, color = "#6699FF")+
+  theme_bw()+
+  xlab("Average comment toxicity in experiment")+
+  ylab("Average external comment toxicity")+
+  guides(color = "none", size = "none")+
+  geom_abline()
+
+cor.test(sample$comment_mean_tox,sample$ex_comment_mean_tox)
+
+comments_length <- ggplot(sample,aes(x = comment_mean_lenght, y = ex_comment_mean_lenght,
+                                     size = comment_count))+
+  geom_point(alpha = 0.5, color = "#6699FF")+
+  theme_bw()+
+  xlab("Average comment length in experiment")+
+  ylab("Average external comment length")+
+  guides(color = "none", size = "none")+
+  geom_abline()
+
+cor.test(sample$comment_mean_lenght,sample$ex_comment_mean_lenght)
+
+cor.test(log(sample$comment_karma),sample$comment_count)
+
+comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 1, top = "Comment characteristics per active user")
+ggsave("../output/comment_tox_length.pdf", comment_tox_length, width = 7 , height = 3.5)
+```
+
+## Comment karma and platform seniority
+```{r, fig.width=12, fig.height=5}
+# Posting a comment on an existing post and receiving upvotes results in "comment" karma
+k1 <- ggplot(sample)+
+  geom_histogram(aes(comment_karma), fill = "#6699FF")+
+  theme_bw()+
+  ylab("Number of users")+
+  xlab("Comment Karma")
+
+k2 <- ggplot(sample)+
+  geom_histogram(aes(log(comment_karma)), fill = "#6699FF")+
+  theme_bw()+
+  ylab("Number of users")+
+  xlab("Comment Karma (Log-scale)")
+
+create <- ggplot(sample)+
+  geom_histogram(aes(date(created)), fill = "lightgrey", bins = 100)+
+  annotate("text", x = min(date(sample$created), na.rm = TRUE), y = Inf, label = paste("First:", min(date(sample$created), na.rm = T)), vjust = 2, hjust = 0) +
+  annotate("text", x = max(date(sample$created), na.rm = TRUE), y = Inf, label = paste("Last:", max(date(sample$created), na.rm = T)), vjust = 2, hjust = 1)+
+  theme_bw()+
+  ylab("Number of accounts")+
+  xlab("Date joined Reddit")
+
+kplot <- grid.arrange(k2,create, nrow = 1,
+                      top = paste0("Distributions of platform seniority (N = ",nrow(sample),") Start of recruitment: 2024-05-09"))
+
+ggsave("../output/platform_seniority.pdf", kplot, width = 8, height = 4)
+```
+
+## External comments
+```{r, fig.width=12, fig.height=5}
+internal_comments <- discussion_data %>% mutate(source = "internal")%>%
+  select(ParticipantID,created_comment,comment_toxicity,length_comment_char, source)%>%
+  filter(created_comment > as_datetime("2024-06-10") & created_comment < as_datetime("2024-07-06"))
+  
+external_comments <- external_data %>% mutate(source = "external")%>%
+  select(ParticipantID,created_comment,comment_toxicity,length_comment_char, source)%>%
+  filter(created_comment > as_datetime("2024-05-13"))
+
+all_data <- bind_rows(internal_comments, external_comments)
+all_data$created_comment <- as.Date(all_data$created_comment)
+
+all_data <- all_data %>%
+  mutate(week = floor_date(created_comment, unit = "week"))
+
+daily_summary <- all_data %>%
+  group_by(source, ParticipantID, created_comment) %>%
+  summarize(comment_volume = n(),  # Count of comments per user per day
+    avg_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>%
+  ungroup()
+
+study_start <- as.Date("2024-06-10")
+study_end <- as.Date("2024-07-05")
+
+int_ext <- ggplot(daily_summary, aes(x = created_comment, y = avg_toxicity)) +
+  geom_point(data = subset(daily_summary, source == "external"),
+             aes(size = comment_volume), color = "grey", alpha = 0.2) +
+  geom_point(data = subset(daily_summary, source == "internal"),
+             aes(size = comment_volume), color = "#6699FF", alpha = 0.5) +
+  geom_smooth(data = subset(daily_summary, source == "external"),
+              aes(y = avg_toxicity), color = "darkgrey", method = "loess", se = FALSE) +
+  geom_smooth(data = subset(daily_summary, source == "internal"),
+              aes(y = avg_toxicity), color = "#3d5b99", method = "loess", se = FALSE) +
+  geom_vline(xintercept = as.numeric(study_start), linetype = "dashed", color = "black") +
+  geom_vline(xintercept = as.numeric(study_end), linetype = "dashed", color = "black") +
+  labs(x = "Date", y = "Average toxicity (per user per day)",
+       size = "Number of Comments \n per user per day",
+       title = "Daily Comment Toxicity and Volume per User (External vs Internal Data)") +
+  scale_size_continuous(range = c(1, 5)) +  
+  theme_minimal() +
+  theme(legend.position = "right",
+    plot.title = element_text(hjust = 0.5))
+int_ext
+
+ggsave("../output/internal_external_toxicity.pdf", int_ext, width = 8, height = 3)
+```
+
+
+```{r, fig.width=12, fig.height=5}
+# Aggregate data by ParticipantID, day, and source
+
+daily_summary_act <- all_data %>%
+  group_by(source, ParticipantID, created_comment) %>%
+  summarize(comment_volume = n(), 
+    avg_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>%
+  ungroup()
+
+int_ext_act <- ggplot(daily_summary, aes(x = created_comment, y = comment_volume)) +
+  geom_point(data = subset(daily_summary, source == "external"),
+             aes(size = avg_toxicity, alpha = avg_toxicity), color = "grey") +
+  geom_point(data = subset(daily_summary, source == "internal"),
+             aes(size = avg_toxicity, alpha = avg_toxicity), color = "#6699FF") +
+  geom_smooth(data = subset(daily_summary, source == "external"),
+              aes(y = comment_volume), color = "darkgrey", method = "loess", se = FALSE) +
+  geom_smooth(data = subset(daily_summary, source == "internal"),
+              aes(y = comment_volume), color = "#3d5b99", method = "loess", se = FALSE) +
+  geom_vline(xintercept = as.numeric(study_start), linetype = "dashed", color = "black") +
+  geom_vline(xintercept = as.numeric(study_end), linetype = "dashed", color = "black") +
+  labs(x = "Date", y = "Number of Comments per User per Day",
+       size = "Average Toxicity",
+       alpha = "Average Toxicity",
+       title = "Daily Comment Volume and Toxicity per User (External vs Internal Data)") +
+  scale_size_continuous(range = c(1, 5)) + 
+  scale_alpha_continuous(range = c(0.2, 1)) + 
+  theme_minimal() +
+  theme(legend.position = "right",
+    plot.title = element_text(hjust = 0.5))
+
+int_ext_act
+
+ggsave("../output/internal_external_activity.pdf", int_ext_act, width = 9, height = 3)
+```
+
+
+
+
+# Other survey descriptives
+
+## Online activity
+```{r, fig.width=12, fig.height=3}
+a <- ggplot(sample)+
+  geom_bar(aes(time_online), fill = "#6699FF")+
+  theme_bw()+
+  coord_flip()+
+  xlab("")+
+  ylab("")+
+  labs(title = "Time online")+
+  annotate(geom="text", x = 2, y = 0, hjust = 0, label = "Up to one hour per week")+
+  annotate(geom="text", x = 3, y = 0, hjust = 0, label = "Up to one hour per day")+
+  annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Multiple hours per day")+
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Almost the entire day")
+
+
+b <- ggplot(sample)+
+  geom_bar(aes(social_media), fill = "#6699FF")+
+  theme_bw()+
+  coord_flip()+
+  xlab("")+
+  labs(title = "Social media use")+
+  annotate(geom="text", x = 2, y = 0, hjust = 0, label = "A couple of times per week")+
+  annotate(geom="text", x = 3, y = 0, hjust = 0, label = "About once per day")+
+  annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Multiple times per day")+
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Almost constantly")+
+  ylab("")
+
+c <- ggplot(sample)+
+  geom_bar(aes(comments_online), fill = "#6699FF")+
+  theme_bw()+
+  coord_flip()+
+  xlab("")+
+  ylab("")+
+  labs(title = "Commenting online")+
+  annotate(geom="text", x = 1, y = 0, hjust = 0, label = "Never")+
+  annotate(geom="text", x = 2, y = 0, hjust = 0, label = "About once per month")+
+  annotate(geom="text", x = 3, y = 0, hjust = 0, label = "About once per week")+
+  annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Almost daily")+
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Multiple times per day")
+
+abc <- grid.arrange(a, b, c, nrow = 1)
+ggsave("../output/online_activity.pdf", abc, width = 10 , height = 3) 
+```
+
+
+```{r, fig.width=12, fig.height=4}
+# affective polarization
+parties <- ggplot(sample)+
+  geom_density(aes(affective_pol_1),fill = "#6699ff", alpha = 0.5)+
+  geom_density(aes(affective_pol_2),fill = "#bc3455", alpha = 0.5)+
+  theme_bw()+
+  ylab("")+
+  annotate(geom = "text", x = 10, y = 0.04, hjust = 0,  label = "Rating of Republican Party")+
+  annotate(geom = "text", x = 60, y = 0.02, hjust = 0, label = "Rating of Democratic Party")+
+  xlab("Party Rating: 0 = negative, 100 = positive")
+
+dist <- ggplot(sample, aes(affective_polarization))+
+  geom_density(fill = '#a7aabd', alpha = 0.5)+
+  theme_bw()+
+  xlab("Affective Polarization (In party - out party)")
+
+polint <- grid.arrange(parties, dist, nrow = 1, top = "Affective Polarization")
+
+ggsave("../output/polarization.pdf", polint, width = 10 , height = 5)
+```
+
+
+
+## Attitude grids
+```{r}
+# trust matrix 
+trust <- sample %>% 
+  dplyr::select(trust_general_1:trust_general_4)%>%
+  rename(`Politics` = trust_general_1,
+         `Media` = trust_general_2,
+         `Science` = trust_general_3,
+         `People generally` = trust_general_4)%>%
+  # change 1: convert haven_labelled variables to factors 
+  as_factor() %>% 
+  pivot_longer(
+    cols = 1:4,
+    names_to = "Variable",
+    values_to = "Agreement"
+  ) %>% 
+  count(Variable, Agreement) %>% 
+  ggplot(aes(y = n, x = Agreement)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
+  ggtitle("Trust")+
+  theme_bw()
+trust
+
+ggsave("../output/trust_matrix.pdf", trust, width = 4 , height = 5)
+```
+
+
+```{r, fig.width=7, fig.height=7}
+## issue knowledge 
+knowledge <- sample %>% 
+  dplyr::select(issue_knowledge_loan:issue_knowledge_socialmedia)%>%
+  rename_at(1:20, list(~ substr(., 17, nchar(.))))%>%
+  as_factor() %>% 
+  pivot_longer( cols = 1:20,
+    names_to = "Variable",
+    values_to = "Knowledge") %>% 
+  count(Variable, Knowledge) %>% 
+  ggplot(aes(y = n, x = Knowledge)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("1: Nothing, 2: A little, 3: A moderate amoung, 4: A lot")+
+  ggtitle("Issue Knowledge T1")+
+  theme_bw()
+knowledge
+
+ggsave("../output/knowledge_matrix.pdf", knowledge, width = 10 , height = 8)
+```
+
+
+```{r, fig.width=7, fig.height=7}
+## issue attitudes 
+attitudes <- sample %>% 
+  dplyr::select(issue_attitudes_loan:issue_attitudes_socialmedia)%>%
+  rename_at(1:20, list(~ substr(., 17, nchar(.))))%>%
+  as_factor() %>% 
+  pivot_longer(cols = 1:20,
+    names_to = "Variable",
+    values_to = "Attitude") %>% 
+  count(Variable, Attitude) %>% 
+  ggplot(aes(y = n, x = Attitude)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("1: Strongly disagree - 6: Strongly agree")+
+  ggtitle("Issue Attitudes T1")+
+  theme_bw()
+attitudes
+
+ggsave("../output/attitudes_matrix.pdf", attitudes, width = 10 , height = 8) 
+```
+
+## Check-in Surveys
+```{r, fig.width=12, fig.height = 4}
+# exposure check
+exp <- ggplot(post_surveys)+
+  geom_density(aes(exposure_correct, fill = as.factor(survey_week)), alpha = 0.7)+
+  theme_bw()+
+  ylab("")+
+  xlab("Exposure Check: TP - FP, 5 topics, 5 distractors")+
+  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))
+
+ggsave("../output/exposure_check.pdf", exp, width = 5, height = 3)
+
+# issue distance
+dist_abs <- ggplot(post_surveys)+
+  geom_density(aes(issue_distance_abs, fill = as.factor(survey_week)), alpha = 0.7)+
+  theme_bw()+
+  ylab("")+
+  xlab("Absolute Issue Distance: | self - others |, aggregate over 5 topics")+
+  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))
+
+plot <- grid.arrange(exp,dist_abs, nrow = 1)
+
+ggsave("../output/issue_distance.pdf", dist_abs, width = 6, height = 4)
+```
+
+
+```{r}
+# discussion perception
+perceptions <- post_surveys %>% 
+  dplyr::select(discussion_percep_1:discussion_percep_3)%>%
+  rename(`toxic` = discussion_percep_1,
+         `constructive` = discussion_percep_2,
+         `enjoyable` = discussion_percep_3)%>%
+  as_factor() %>% 
+  pivot_longer(cols = 1:3,
+    names_to = "Variable",
+    values_to = "Perception") %>% 
+  count(Variable, Perception) %>% 
+  ggplot(aes(y = n, x = Perception)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
+  ggtitle("Discussion Perception")+
+  theme_bw()
+
+ggsave("../output/discussion_perception.pdf", perceptions, width = 6 , height = 4)
+```
+
+
+```{r, fig.width=12, fig.height = 4}
+# group perception
+perceptions_g <- post_surveys %>% 
+  dplyr::select(group_percep_1:group_percep_3)%>%
+  rename(`respectful` = group_percep_1,
+         `polarized` = group_percep_2,
+         `knowledgeable` = group_percep_3)%>%
+  as_factor() %>% 
+  pivot_longer(cols = 1:3,
+    names_to = "Variable",
+    values_to = "Perception") %>% 
+  count(Variable, Perception) %>% 
+  ggplot(aes(y = n, x = Perception)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
+  ggtitle("Group Perception")+
+  theme_bw()
+
+plot <- grid.arrange(perceptions,perceptions_g, nrow = 1)
+
+ggsave("../output/group_perception.pdf", perceptions_g, width = 6 , height = 4)
+```
+
+
+```{r}
+# participation
+participation <- post_surveys %>% 
+  dplyr::select(participation_4:participation_1)%>%
+  rename(`checked topics` = participation_4,
+         `read some discussions` = participation_5,
+         `followed discussions` = participation_6,
+         `voted some` = participation_7,
+         `voted many` = participation_8,
+         `wrote few comments` = participation_9,
+         `commented everything` = participation_10,
+         `did not participate` = participation_1)%>%
+  as_factor() %>% 
+  pivot_longer(cols = 1:8,
+    names_to = "Variable",
+    values_to = "Participation") %>%
+  group_by(Variable)%>%
+  summarise(Participation = sum(Participation, na.rm = T))%>%
+  mutate(Variable = factor(Variable, levels = c("did not participate", "checked topics",
+                                                   "read some discussions",
+                                                   "followed discussions",
+                                                   "voted some",
+                                                   "voted many",
+                                                   "wrote few comments",
+                                                   "commented everything")))%>%
+  ggplot(aes(y = Participation, x = reorder(Variable,Participation))) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("")+
+  ggtitle("Self-reported participation")+
+  theme_bw()+
+  coord_flip()
+
+ggsave("../output/participation_check.pdf", participation, width = 6 , height = 4)
+```
+
+## Motives for participation (and barriers)
+```{r}
+# motives 
+motives <- post_surveys %>% 
+  dplyr::select(post_motives_20:post_motives_51)%>%
+  rename(`inform others` = post_motives_20,
+         `entertain others` = post_motives_39,
+         `express my opinion` = post_motives_40,
+         `provoke others` = post_motives_41,
+         `express my emotions` = post_motives_42,
+         `connect with others` = post_motives_43,
+         `deceive others` = post_motives_44,
+         `gain attention` = post_motives_45,
+         `prove a point` = post_motives_46,
+         `cause chaos` = post_motives_47,
+         `bring attention to a topic` = post_motives_48,
+         `pursuade others` = post_motives_49,
+         `surprise or shock others` = post_motives_50,
+         `help researchers` = post_motives_51)%>%
+  pivot_longer(cols = 1:14,
+    names_to = "Motives",
+    values_to = "Variable") %>%
+  group_by(Motives)%>%
+  summarise(Variable = sum(Variable, na.rm = T))%>%
+  mutate(Motives = factor(Motives))%>%
+  ggplot(aes(x = reorder(Motives,Variable), y = Variable)) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("")+
+  ggtitle("Motives for writing comments")+
+  theme_bw()+
+  coord_flip()
+
+ggsave("../output/motives.pdf", motives, width = 5 , height = 4)
+```
+
+
+```{r, fig.width=12, fig.height=4}
+# negative motives / barriers to participation
+barriers <- post_surveys %>% 
+  dplyr::select(non_participation_2:non_participation_5,non_participation_1)%>%
+  rename(`no barriers` = non_participation_1,
+         `personally triggered` = non_participation_2,
+         `could not add anything` = non_participation_3,
+         `intimidated by sophistication` = non_participation_4,
+         `afraid of backlash` = non_participation_5)%>%
+  pivot_longer(cols = 1:5,
+    names_to = "Barriers",
+    values_to = "Variable") %>%
+  group_by(Barriers)%>%
+  summarise(Variable = sum(Variable, na.rm = T))%>%
+  mutate(Barriers = factor(Barriers))%>%
+  ggplot(aes(y = Variable, x = reorder(Barriers,Variable))) +
+  geom_col(fill = "#6699FF")+
+  ylab("")+
+  xlab("")+
+  ggtitle("Barriers to writing comments")+
+  theme_bw()+
+  coord_flip()
+
+plot <- grid.arrange(participation,motives,barriers, nrow = 1)
+
+
+ggsave("../output/barriers.pdf", barriers, width = 5 , height = 2)
+```
+
+
+```{r}
+## different to normal Reddit experience 
+differences <- post_surveys %>% 
+  dplyr::select(different_to_real_1:different_to_real_6)%>%
+  na.omit()%>%
+  rename(`toxicity discussion` = different_to_real_1,
+         `constructiveness discussion` = different_to_real_2,
+         `enjoyability discussion` = different_to_real_3,
+         `knowleadgeability group` = different_to_real_4,
+         `polarization group` = different_to_real_5,
+         `respectfulness group` = different_to_real_6)%>%
+  as_factor() %>% 
+  pivot_longer(cols = 1:6,
+    names_to = "Variable",
+    values_to = "Perception") %>% 
+  count(Variable, Perception) %>% 
+  mutate(Variable = factor(Variable, levels = c("toxicity discussion",
+                                                "constructiveness discussion",
+                                                "enjoyability discussion",
+                                                "knowleadgeability group",
+                                                "polarization group",
+                                                "respectfulness group")))%>%
+  ggplot(aes(y = n, x = Perception)) +
+  facet_wrap(. ~ Variable) +
+  geom_col(fill = "#6699FF")+
+  #coord_flip()+
+  ylab("")+
+  xlab("1: Very similar, 2: Somewhat similar, 3: Somewhat different, 4: Very different")+
+  ggtitle("Perceived difference to typical experience on Reddit")+
+  theme_bw()
+differences
+
+ggsave("../output/differences_perception.pdf", differences, width = 6 , height = 5) 
+```
