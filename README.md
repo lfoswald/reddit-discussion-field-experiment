@@ -10,9 +10,18 @@ Reddit metrics (internal and external)
 
 [`01-sample-descriptives.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/01-sample-descriptives.Rmd) / [`01-sample-descriptives.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/01-sample-descriptives.html)
 
-## RQ1 - Prediction of participation
+## RQ1 - Discussion participation
+Zero hurdle models to describe predictors of individual discussion participation in two parts (continuous comment counts vs. overcoming the zero hurdle); closes with hudle models for different experimental conditions and baseline balance table
+
+[`02-RQ1-participation.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/02-RQ1-participation.Rmd) / [`02-RQ1-participation.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/02-RQ1-participation.html)
 
 ## RQ2 - Treatment effects
+
+Effects on participation distributions, effects on discourse metrics (toxicity and comment length) and effects on political attitude deltas between pre and post surveys 
+
+[`03-RQ2-experiment.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/03-RQ2-experiment.Rmd) / [`03-RQ2-experiment.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/03-RQ2-experiment.html)
+
+
 
 ## Supplementary Analyses
 
