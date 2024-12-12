@@ -29,10 +29,3 @@ Visualization of comment graphs and user interaction networks, analysis of degre
 
 [`05-networks.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/05-networks.Rmd) / [`05-networks.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/05-networks.html)
 
-## Supplementary scripts 
-Scripts for the following tasks cannot be executed because data access is restricted for reasons of data privacy and safety.  
-
-* User interaction & project management
-* Data collection
-* Raw data preprocessing
-
