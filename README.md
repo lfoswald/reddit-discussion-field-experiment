@@ -16,10 +16,13 @@ Zero hurdle models to describe predictors of individual discussion participation
 [`02-RQ1-participation.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/02-RQ1-participation.Rmd) / [`02-RQ1-participation.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/02-RQ1-participation.html)
 
 ## RQ2 - Treatment effects
-
-Effects on participation distributions, effects on discourse metrics (toxicity and comment length) and effects on political attitude deltas between pre and post surveys 
+Part one: Effects of experimental conditions on participation distributions, effects on discourse metrics (toxicity and comment length) and effects on political attitude deltas between pre and post surveys 
 
 [`03-RQ2-experiment.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/03-RQ2-experiment.Rmd) / [`03-RQ2-experiment.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/03-RQ2-experiment.html)
+
+Part two: Overtime change. Summary effects of treatments on political variable deltas and pooled overtime analyses - change in political variables (trust, polarization, etc.) issue attitudes and issue knowledge; exploration of individual issue opinion trajectories (as exploration of data granularity) 
+
+[`04-opinion-change.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/04-opinion-change.Rmd) / [`04-opinion-change.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/04-opinion-change.html)
 
 
 

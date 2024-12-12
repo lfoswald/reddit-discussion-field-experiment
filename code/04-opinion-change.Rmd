@@ -1,0 +1,1048 @@
+---
+title: "Political attitude change"
+subtitle: "Reddit Communities Field Experiment"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r include=FALSE, }
+knitr::opts_chunk$set(echo = TRUE, message=F, warning=F)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(lme4)
+library(gridExtra)
+library(modelsummary)
+```
+
+Import data
+```{r include=FALSE}
+full_data <- read_csv("../data/anon/full_data_waves.csv")
+scaled_sample <- read_csv("../data/anon/scaled_sample.csv")
+discussion_df <- read_csv("../data/anon/discussions_anon.csv")
+```
+
+Data scaling for remaining variables
+```{r}
+gelman_scale <- function(x){
+  ( (x - mean(x, na.rm=T)) / (2*sd(x, na.rm=TRUE)))
+}
+
+# create pre-post comparison data
+prepost_data <- full_data%>%
+    select(time_online_w1, social_media_w1, comments_online_w1,
+         leftright_w1, polinterest_w1, affective_pol_1_w1, affective_pol_2_w1,
+         issue_attitudes_loan_w1:issue_attitudes_socialmedia_w1, 
+         issue_knowledge_loan_w1:issue_knowledge_socialmedia_w1,
+         political_efficacy_1_w1:political_efficacy_3_w1,
+         trust_general_1_w1:trust_general_4_w1,
+         pol_cynicism_w1, efficacy_w1, efficacy_w5,
+         time_online_w5, social_media_w5, comments_online_w5,
+         leftright_w5, polinterest_w5, affective_pol_1_w5, affective_pol_2_w5,
+         issue_attitudes_loan_w5:issue_attitudes_socialmedia_w5, 
+         issue_knowledge_loan_w5:issue_knowledge_socialmedia_w5,
+         political_efficacy_1_w5:political_efficacy_3_w5, 
+         comment_count, comment_karma,issue_distance_abs_w5,
+         trust_general_1_w5:trust_general_4_w5,
+         affective_polarization_w1,affective_polarization_w5,
+         pol_cynicism_w5, condition, ParticipantID, subreddit_w1, active, gender, 
+         discussion_percep_1_w5, discussion_percep_2_w5, discussion_percep_3_w5, 
+         group_percep_1_w5, group_percep_2_w5,  
+         group_percep_3_w5, post_motives_20_w5, post_motives_39_w5, post_motives_40_w5, 
+         post_motives_41_w5, post_motives_42_w5, 
+         post_motives_43_w5, post_motives_44_w5 , post_motives_45_w5, post_motives_46_w5,    
+         post_motives_47_w5, post_motives_48_w5 , post_motives_49_w5,    
+         post_motives_50_w5,  post_motives_51_w5,            
+         post_motives_55_w5)%>%
+  mutate(polinterest_w5 = polinterest_w5 + 1)%>% # fix coding error! 
+  pivot_longer(cols = -c(condition:post_motives_55_w5, comment_count, 
+                         comment_karma,issue_distance_abs_w5, gender),
+               names_to = c(".value", "wave"),  
+               names_pattern = "(.*)\\_w(1|5)")%>%
+  mutate(across(c(time_online:affective_polarization), gelman_scale))%>%
+  mutate(time = factor(ifelse(wave == "1", 1, 2)),
+         subreddit = factor(subreddit_w1))%>%
+  filter(!str_detect(condition, "\\|"))%>%
+  filter(!is.na(issue_distance_abs_w5)) # only keep participants who have completed post survey
+
+write_csv(prepost_data, file = "../data/anon/scaled_sample_waves.csv")
+```
+
+## Overall Change in Political Variables
+
+Pre vs. post survey opinion change of political variables
+```{r, fig.height=4, fig.width=4}
+# add individual random intercept, subreddit random intercept
+models <- list(
+    lmer(affective_polarization ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(pol_cynicism ~  time  + (1 | ParticipantID)   + (1 | subreddit), data=prepost_data),
+    lmer(efficacy ~ time  + (1 | ParticipantID)  + (1 | subreddit) , data=prepost_data),
+    lmer(leftright ~ time  + (1 | ParticipantID) + (1 | subreddit) , data=prepost_data),
+    lmer(polinterest ~  time  + (1 | ParticipantID)  + (1  | subreddit) , data=prepost_data),
+    lmer(trust_general_1 ~  time  + (1 | ParticipantID)  + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_2 ~  time  + (1 | ParticipantID) + (1 | subreddit) , data=prepost_data),
+    lmer(trust_general_3 ~  time  + (1 | ParticipantID) + (1 | subreddit) , data=prepost_data),
+    lmer(trust_general_4 ~  time  + (1 | ParticipantID) + (1 | subreddit) , data=prepost_data))
+
+variables <- c(
+  "Affective polarization", "Political cynicism", "Political efficiacy", "Political orientation",
+  "Political interest", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others")
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],        
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+prepost_plot <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Political variables")+
+  xlab("")+
+  ylab("Before vs. after Discussion")
+
+prepost_plot
+
+ggsave("../output/prepost_plot.pdf",prepost_plot, width = 4, height = 4)
+
+```
+
+Regression table
+```{r}
+model1 <- lmer(affective_polarization ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model2 <- lmer(pol_cynicism ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model3 <- lmer(efficacy ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model4 <- lmer(leftright ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model5 <- lmer(polinterest ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model6 <- lmer(trust_general_1 ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model7 <- lmer(trust_general_2 ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model8 <- lmer(trust_general_3 ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+model9 <- lmer(trust_general_4 ~ time + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+
+# Create a list of models
+models <- list(
+  "Affective Polarization" = model1,
+  "Political Cynicism" = model2,
+  "Efficacy" = model3,
+  "Left-Right Scale" = model4,
+  "Political Interest" = model5,
+  "Trust General 1" = model6,
+  "Trust General 2" = model7,
+  "Trust General 3" = model8,
+  "Trust General 4" = model9
+)
+
+options("modelsummary_format_numeric_latex" = "plain")
+modelsummary(models, output = "html")
+```
+
+## Political Variable Change between Conditions
+```{r}
+models <- list(
+    lmer(affective_polarization ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(pol_cynicism ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(efficacy ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(leftright ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(polinterest ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_1 ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_2 ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_3 ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_4 ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1], 
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))%>%
+  mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
+
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+prepost_plot <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2, color = Condition), 
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Political variables by Condition")+
+  xlab("")+
+  ylab("Before vs. After Discussion") +
+  scale_color_manual(values = c("#29c195","#6699FF"))  # Customize color palette
+
+prepost_plot
+
+ggsave("../output/prepost_plot_condition.pdf", prepost_plot, width = 6, height = 4)
+```
+
+## Political Variable Change between Active vs. Passive
+```{r, fig.width=10, fig.height=4}
+models <- list(
+    lmer(affective_polarization ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(pol_cynicism ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(efficacy ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(leftright ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(polinterest ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_1 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_2 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_3 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_4 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                      
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+  
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2),color = "#6699FF",  
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change by activity", subtitle = "Binary activity")+
+  xlab("")+
+  ylab("Before vs. After Discussion") 
+
+
+# opinion change by continuous activity
+
+models <- list(
+    lmer(affective_polarization ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(pol_cynicism ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(efficacy ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(leftright ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(polinterest ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_1 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_2 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_3 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+    lmer(trust_general_4 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  # Coefficient values
+    SE = summary(models[[i]])$coef[-1, 2],          # Standard Errors
+    Variable = variables[i]                        # Variable name
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+  
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2),color = "#6699FF",  
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change by activity", subtitle = "Number of comments")+
+  xlab("")+
+  ylab("Before vs. After Discussion") 
+
+combi <- grid.arrange(prepost_plot1, prepost_plot2, nrow = 1)
+
+ggsave("../output/prepost_plot_active.pdf", combi, width = 10, height = 4)
+```
+
+Opinion change between active and passive, control group only
+```{r, fig.height=4, fig.width=10}
+prepost_datac <- prepost_data%>%
+  filter(condition == "control")
+
+# binary active vs. passive, control group only 
+
+models <- list(
+    lmer(affective_polarization ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(pol_cynicism ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(efficacy ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(leftright ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(polinterest ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_1 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_2 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_3 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_4 ~ time * active + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac)
+)
+
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1], 
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                        
+  )
+}
+
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+  
+
+prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2),color = "#6699FF",  
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change by activity", subtitle = "Binary activity (control only)")+
+  xlab("")+
+  ylab("Before vs. After Discussion") 
+
+
+# continuous comment count, control only 
+
+models <- list(
+    lmer(affective_polarization ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(pol_cynicism ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(efficacy ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(leftright ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(polinterest ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_1 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_2 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_3 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac),
+    lmer(trust_general_4 ~ time * comment_count + (1 | ParticipantID) + (1 | subreddit), data=prepost_datac)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                     
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2),color = "#6699FF",  
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change by activity", subtitle = "Number of comments (control only)")+
+  xlab("")+
+  ylab("Before vs. After Discussion") 
+
+combi <- grid.arrange(prepost_plot1, prepost_plot2, nrow = 1)
+
+ggsave("../output/prepost_plot_active_control.pdf", combi, width = 10, height = 4)
+```
+
+
+## Issue Opinion Change
+
+```{r, fig.height=5, fig.width=7}
+models <- list(
+  lmer(issue_attitudes_loan ~ time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_airbnb ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_minwage ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ukraine ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ubi ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_climate ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_fur ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_renewable ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gaza ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vegetarian ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gender ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_sexwork ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vaccine ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_healthcare ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_immigration ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_guns ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_deathpenalty ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_bodycams ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ai ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_socialmedia ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data))
+      
+  
+variables <- c("Student loan", "Airbnb / housing", "Minimum wage", "War in Ukraine",
+  "Universal basic income", "Climate change", "Fur clothing","Renewable energy",  "War in Gaza",
+  "Vegetarianism", "Gender", "Sexwork", "Vaccination", "Healthcare", "Immigration",
+  "Gun control", "Deathpenalty", "Police bodycameras", "Artificial intelligence",
+  "Social media")
+
+# political statement framings / directions
+directions <- factor(c("conservative", "liberal", "liberal", "liberal",
+                "conservative", "liberal", "liberal", "conservative", "liberal",
+                "liberal", "conservative", "conservative", "liberal", "conservative", "conservative",
+                "liberal", "conservative", "liberal", "conservative", "liberal"))
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                       
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- cbind(combined_df,directions)
+combined_df <- combined_df%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "#6699FF",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  facet_grid(. ~ directions)+
+  coord_flip()+
+  ggtitle("Average changes in issue attitudes")+
+  xlab("")+
+  ylab("Partial pooling, participant and group random intercepts")
+
+prepost_plot_issues
+
+ggsave("../output/prepost_plot_issues.pdf",prepost_plot_issues, width = 6, height = 6)
+
+
+```
+
+## Issue Opinion Change by experimental condition
+```{r, fig.height=5, fig.width=7}
+
+models <- list(
+  lmer(issue_attitudes_loan ~ time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_airbnb ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_minwage ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ukraine ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ubi ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_climate ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_fur ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_renewable ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gaza ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vegetarian ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gender ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_sexwork ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vaccine ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_healthcare ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_immigration ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_guns ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_deathpenalty ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_bodycams ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ai ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_socialmedia ~  time * condition + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data))
+      
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Variable = variables[i]                        
+  )
+}
+
+
+combined_df <- do.call(rbind, model_frames)%>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))
+combined_df <- cbind(combined_df,directions)%>%
+  mutate(Variable = fct_inorder(rev(Variable)))%>%
+  mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
+
+prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2, color = Condition), 
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  facet_grid(. ~ directions)+
+  coord_flip()+
+  scale_color_manual(values = c("#29c195","#6699FF"))+ 
+  ggtitle("Change in issue attitudes by condition")+
+  xlab("")+
+  ylab("Partial pooling, participant and group random intercepts")
+
+prepost_plot_issues
+
+ggsave("../output/prepost_plot_issues_condition.pdf",prepost_plot_issues, width = 6, height = 6)
+
+```
+
+## Issue Opinion Change by activity
+```{r, fig.width=12, fig.height=6}
+
+# binary activity (active vs. passive)
+
+models <- list(
+  lmer(issue_attitudes_loan ~ time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_airbnb ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_minwage ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ukraine ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ubi ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_climate ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_fur ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_renewable ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gaza ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vegetarian ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gender ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_sexwork ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vaccine ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_healthcare ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_immigration ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_guns ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_deathpenalty ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_bodycams ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ai ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_socialmedia ~  time * active + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data))
+      
+model_frames <- list()
+
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)%>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+prepost_plot_issues1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), color = "#6699FF",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change in issue attitudes by activity", subtitle = "Binary activity")+
+  xlab("")+
+  ylab("Partial pooling, participant and group random intercepts")
+
+
+# continuous comment count 
+
+models <- list(
+  lmer(issue_attitudes_loan ~ time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_airbnb ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_minwage ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ukraine ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ubi ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_climate ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_fur ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_renewable ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gaza ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vegetarian ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_gender ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_sexwork ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_vaccine ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_healthcare ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_immigration ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_guns ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_deathpenalty ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_bodycams ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_ai ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_attitudes_socialmedia ~  time * comment_count + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data))
+      
+model_frames <- list()
+
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)%>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+prepost_plot_issues2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), color = "#6699FF",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Change in issue attitudes by activity", subtitle = "Number of comments")+
+  xlab("")+
+  ylab("Partial pooling, participant and group random intercepts")
+
+
+combi <- grid.arrange(prepost_plot_issues1, prepost_plot_issues2, nrow = 1)
+
+ggsave("../output/prepost_plot_issues_active.pdf",combi, width = 12, height = 6)
+
+```
+
+## Issue Knowledge Change
+```{r, fig.width=6, fig.height=6}
+models <- list(
+  lmer(issue_knowledge_loan ~ time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_airbnb ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_minwage ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_ukraine ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_ubi ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_climate ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_fur ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_renewable ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_mideast ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_vegetarian ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_gender ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_sexwork ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_vaccine ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_healthcare ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_immigration ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_guns ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_deathpenalty ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_bodycams ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_ai ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data),
+  lmer(issue_knowledge_socialmedia ~  time + (1 | ParticipantID) + ( 1 | subreddit) , data=prepost_data))
+
+variables <- c("Student loan", "Airbnb / housing", "Minimum wage", "War in Ukraine",
+  "Universal basic income", "Climate change", "Fur clothing","Renewable energy",  "War in Gaza",
+  "Vegetarianism", "Gender", "Sexwork", "Vaccination", "Healthcare", "Immigration",
+  "Gun control", "Deathpenalty", "Police bodycameras", "Artificial intelligence",
+  "Social media")
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Variable = fct_inorder(rev(Variable)))
+
+prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "#6699FF",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Issue knowledge change")+
+  xlab("")+
+  ylab("Partial pooling, pre vs. post comparison")
+
+prepost_plot_knowledge
+
+ggsave("../output/prepost_plot_knowledge.pdf",prepost_plot_knowledge, width = 5, height = 6)
+
+```
+
+## Issue knowledge change by condition
+```{r}
+
+models <- list(
+  lmer(issue_knowledge_loan ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_airbnb ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_minwage ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_ukraine ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_ubi ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_climate ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_fur ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_renewable ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_mideast ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_vegetarian ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_gender ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_sexwork ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_vaccine ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_healthcare ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_immigration ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_guns ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_deathpenalty ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_bodycams ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_ai ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data),
+  lmer(issue_knowledge_socialmedia ~ time * condition + (1 | ParticipantID) + (1 | subreddit), data=prepost_data)
+)
+
+variables <- c("Student loan", "Airbnb / housing", "Minimum wage", "War in Ukraine",
+  "Universal basic income", "Climate change", "Fur clothing", "Renewable energy", "War in Gaza",
+  "Vegetarianism", "Gender", "Sexwork", "Vaccination", "Healthcare", "Immigration",
+  "Gun control", "Deathpenalty", "Police bodycameras", "Artificial intelligence",
+  "Social media")
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Variable = variables[i]                        
+  )
+}
+
+
+combined_df <- do.call(rbind, model_frames)
+
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Variable = fct_inorder(rev(Variable)))%>%
+  mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
+
+prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable), group = Condition, color = Condition)) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), 
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Issue Knowledge Change by Condition")+
+  xlab("")+
+  ylab("Pre vs. Post Comparison") +
+  scale_color_manual(values = c("#29c195","#6699FF"))
+
+prepost_plot_knowledge
+
+ggsave("../output/prepost_knowledge_by_condition.pdf", prepost_plot_knowledge, width = 6, height = 6)
+
+```
+
+
+## Conditional Issue Opinion Change (top 5 issues)
+```{r}
+# middle east
+# gender
+# immigration
+# climate change
+# minimum wage
+
+# description first
+attitudes_data <- full_data %>% 
+  dplyr::select(issue_attitudes_immigration_w1, issue_attitudes_climate_w1, issue_attitudes_gaza_w1,
+                issue_attitudes_minwage_w1, issue_attitudes_gender_w1,
+                issue_attitudes_immigration_w5, issue_attitudes_climate_w5, issue_attitudes_gaza_w5,
+                issue_attitudes_minwage_w5, issue_attitudes_gender_w5)%>%
+  rename_at(1:10, list(~ substr(., 17, nchar(.))))%>%
+  pivot_longer(
+    cols = 1:10,
+    names_to = "Variable",
+    values_to = "Attitude"
+  ) %>% 
+  count(Variable, Attitude) %>% 
+  mutate(Variable = factor(Variable, levels = c("gender_w1", "gaza_w1", "climate_w1",
+                "minwage_w1", "immigration_w1",
+                "gender_w5", "gaza_w5", "climate_w5",
+                "minwage_w5", "immigration_w5")))%>%
+  na.omit()%>%
+  mutate(Groups = factor(rep(1:5, each = 12)))
+
+attitudes <- ggplot(attitudes_data, aes(y = n, x = Attitude)) +
+  geom_col(aes(fill = Groups))+
+  scale_fill_manual(values = c("#bc3455", "#424656", "#f96d86","#a7aabd","#6699ff"))+
+  facet_wrap(. ~ Variable,  ncol = 5) +
+  ylab("")+
+  guides(fill = "none")+
+  xlab("1: Strongly disagree - 6: Strongly agree")+
+  ggtitle("Issue Attitudes W1 (before discussions) vs. W5 (after discussions)")+
+  theme_bw()
+attitudes
+
+ggsave("../output/attitudes_w1w5.pdf", attitudes, width = 10 , height = 5)
+```
+
+
+```{r, fig.height=6, fig.width=6}
+# depending on own participation
+gender_mod <- lmer(issue_attitudes_gender ~ time + time * comment_count + time* leftright + time* polinterest
+                   + time * issue_distance_abs_w5 + time * discussion_percep_1_w5 + time * gender
+                   + (1 | ParticipantID) + (1 | subreddit), 
+                   data = prepost_data)
+
+mideast_mod <- lmer(issue_attitudes_gaza ~ time + time * comment_count + time* leftright + time* polinterest
+                   + time * issue_distance_abs_w5 + time * discussion_percep_1_w5 + time * gender
+                   + (1 | ParticipantID) + (1 | subreddit), 
+                   data = prepost_data)
+
+climate_mod <- lmer(issue_attitudes_climate ~ time + time * comment_count + time* leftright + time* polinterest
+                   + time * issue_distance_abs_w5 + time * discussion_percep_1_w5 + time * gender
+                   + (1 | ParticipantID) + (1 | subreddit), 
+                   data = prepost_data)
+
+minwage_mod <- lmer(issue_attitudes_minwage ~ time + time * comment_count + time* leftright + time* polinterest
+                   + time * issue_distance_abs_w5 + time * discussion_percep_1_w5 + time * gender
+                   + (1 | ParticipantID) + (1 | subreddit), 
+                   data = prepost_data)
+
+migration_mod <- lmer(issue_attitudes_immigration ~ time + time * comment_count + time* leftright + time* polinterest
+                   + time * issue_distance_abs_w5 + time * discussion_percep_1_w5 + time * gender
+                   + (1 | ParticipantID) + (1 | subreddit), 
+                   data = prepost_data)
+
+tidy_gender <- broom.mixed::tidy(gender_mod, effects = "fixed") %>% mutate(model = "Gender")
+tidy_mideast <- broom.mixed::tidy(mideast_mod, effects = "fixed") %>% mutate(model = "Mideast")
+tidy_climate <- broom.mixed::tidy(climate_mod, effects = "fixed") %>% mutate(model = "Climate")
+tidy_minwage <- broom.mixed::tidy(minwage_mod, effects = "fixed") %>% mutate(model = "Minwage")
+tidy_migration <- broom.mixed::tidy(migration_mod, effects = "fixed") %>% mutate(model = "Immigration")
+
+combined_tidy <- bind_rows(tidy_gender, tidy_mideast, tidy_climate, tidy_minwage, tidy_migration)%>%
+  filter(term != "(Intercept)")%>%
+  mutate(term = fct_inorder(rev(term)))
+  
+issue_mod_plot <- ggplot(combined_tidy, aes(x = estimate, y = rev(term), color = model)) +
+  geom_point(size = 2,position = position_dodge(0.5)) +
+  geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error), 
+                 height = 0, position = position_dodge(0.5)) +
+  scale_color_manual(values = c("#bc3455", "#f96d86", "#a7aabd", "#424656", "#6699ff")) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  theme_bw() +
+  ylab("")+
+  guides(colour = guide_legend(title = "Issue model")) +
+  scale_y_discrete(labels = c("Gender * Discussions", "Toxicity perception * Discussions",
+                             "Issue distance * Discussions", "Political interest * Discussions",
+                             "Political Orientation * Discussions", "Comment count * Discussions",
+                             "Gender", "Toxicity perception", "Issue distance", "Political Interest",
+                             "Political Orientation", "Comment count", "Discussions")) +
+  xlab("Partial pooling with participant and group random intercept") +
+  ggtitle("Conditional overtime changes in issue attitudes")
+
+issue_mod_plot
+
+ggsave("../output/issue_mod_plot.pdf", issue_mod_plot, width = 6, height = 6)
+
+```
+
+# Individual opinion trajectories 
+within topic, within condition, by group toxicity and individual participation 
+(exploratory zooming in to show what is possible with the data)
+```{r, fig.width=12, fig.height=18}
+# individual opinion change over time - Immigration
+toxicity <- discussion_df%>%
+  filter(str_detect(post_title, "Immigration"))%>%
+  group_by(subreddit)%>%
+  mutate(migration_toxicity = mean(comment_toxicity))%>%
+  slice(1)%>%
+  select(subreddit, migration_toxicity, `Collected comments`, `total_views`)
+
+
+ioc_data_migration <- full_data %>%
+  mutate(issue_attitudes_immigration_c1 = ifelse(str_detect(topic_1,"Immigration"), issues_self_c1_1, NA),
+         issue_attitudes_immigration_c1 = ifelse(str_detect(topic_2,"Immigration"), issues_self_c1_29, issue_attitudes_immigration_c1),
+         issue_attitudes_immigration_c1 = ifelse(str_detect(topic_3,"Immigration"), issues_self_c1_30, issue_attitudes_immigration_c1),
+         issue_attitudes_immigration_c1 = ifelse(str_detect(topic_4,"Immigration"), issues_self_c1_31, issue_attitudes_immigration_c1),
+         issue_attitudes_immigration_c1 = ifelse(str_detect(topic_5,"Immigration"), issues_self_c1_32, issue_attitudes_immigration_c1),
+         
+         issue_attitudes_immigration_c2 = ifelse(str_detect(topic_1_w3,"Immigration"), issues_self_c1_1_w3, NA),
+         issue_attitudes_immigration_c2 = ifelse(str_detect(topic_2_w3,"Immigration"), issues_self_c1_29_w3, issue_attitudes_immigration_c2),
+         issue_attitudes_immigration_c2 = ifelse(str_detect(topic_3_w3,"Immigration"), issues_self_c1_30_w3, issue_attitudes_immigration_c2),
+         issue_attitudes_immigration_c2 = ifelse(str_detect(topic_4_w3,"Immigration"), issues_self_c1_31_w3, issue_attitudes_immigration_c2),
+         issue_attitudes_immigration_c2 = ifelse(str_detect(topic_5_w3,"Immigration"), issues_self_c1_32_w3, issue_attitudes_immigration_c2),
+         
+         issue_attitudes_immigration_c3 = ifelse(str_detect(topic_1_w4,"Immigration"), issues_self_c1_1_w4, NA),
+         issue_attitudes_immigration_c3 = ifelse(str_detect(topic_2_w4,"Immigration"), issues_self_c1_29_w4, issue_attitudes_immigration_c3),
+         issue_attitudes_immigration_c3 = ifelse(str_detect(topic_3_w4,"Immigration"), issues_self_c1_30_w4, issue_attitudes_immigration_c3),
+         issue_attitudes_immigration_c3 = ifelse(str_detect(topic_4_w4,"Immigration"), issues_self_c1_31_w4, issue_attitudes_immigration_c3),
+         issue_attitudes_immigration_c3 = ifelse(str_detect(topic_5_w4,"Immigration"), issues_self_c1_32_w4, issue_attitudes_immigration_c3),
+         
+         issue_attitudes_immigration_c4 = ifelse(str_detect(topic_1_w5,"Immigration"), issues_self_c1_1_w5, NA),
+         issue_attitudes_immigration_c4 = ifelse(str_detect(topic_2_w5,"Immigration"), issues_self_c1_29_w5, issue_attitudes_immigration_c4),
+         issue_attitudes_immigration_c4 = ifelse(str_detect(topic_3_w5,"Immigration"), issues_self_c1_30_w5, issue_attitudes_immigration_c4),
+         issue_attitudes_immigration_c4 = ifelse(str_detect(topic_4_w5,"Immigration"), issues_self_c1_31_w5, issue_attitudes_immigration_c4),
+         issue_attitudes_immigration_c4 = ifelse(str_detect(topic_5_w5,"Immigration"), issues_self_c1_32_w5, issue_attitudes_immigration_c4),
+         )%>%
+  mutate(subreddit = subreddit_w1)%>%
+  select(issue_attitudes_immigration_w1,issue_attitudes_immigration_c1,issue_attitudes_immigration_c2,
+         issue_attitudes_immigration_c3, issue_attitudes_immigration_c4, issue_attitudes_immigration_w5, 
+         subreddit, condition, gender, polinterest_w1, leftright_w1, comment_count, ParticipantID)%>%
+  left_join(.,toxicity, by = "subreddit")
+
+
+ioc_long_migration <- ioc_data_migration%>%
+  pivot_longer(cols = -c(subreddit, condition, gender, polinterest_w1, leftright_w1, comment_count, 
+                         ParticipantID, `Collected comments`, total_views, migration_toxicity),
+               names_prefix = "issue_attitudes_immigration_",
+               names_to = "wave",
+               values_to = "attitude")%>%
+  mutate(wave = factor(wave, levels = c("w1","c1","c2","c3","c4","w5")),
+         gender = factor(gender),
+         comment_activity = `Collected comments`,
+         comment_count = ifelse(is.na(comment_count), 0, comment_count))%>%
+  mutate(attitude = ifelse(subreddit == "DiscussPolitics6" & wave == "c4", NA, attitude))%>%
+  na.omit()
+
+# Create a new dataset for line segments
+df_segments <- ioc_long_migration %>%
+  group_by(ParticipantID) %>%
+  mutate(
+    wave_next = lead(wave),
+    value_next = lead(attitude)
+  ) %>%
+  filter(!is.na(wave_next))  # Remove rows where there is no next point
+
+# Plot
+ioc_migration <- ggplot() +
+  geom_segment(data = df_segments,
+               aes(x = wave, y = attitude, xend = wave_next, yend = value_next, color = migration_toxicity),
+               lineend = "round", alpha = 0.3) +  
+  geom_boxplot(data = ioc_long_migration, aes(group = wave, x = wave, y = attitude), alpha = 0.3, color = "black") +
+  geom_jitter(data = ioc_long_migration, aes(x = wave, y = attitude, color = migration_toxicity, size = comment_count), 
+             na.rm = TRUE, alpha = 0.3, width = 0.2, height = 0.2) +  
+  labs(x = "Wave", y = "Attitude", size = "Individual \n comment activity", color = "Toxicity of \n migration discussion") +
+  #guides(color = "none")+
+  theme_bw()+
+  facet_wrap(. ~ subreddit, ncol = 1)+
+  ggtitle("Individual Migration Attitude Trajectories", subtitle = "Agreement with: \"Immigration should be regulated more strictly.\"")
+
+
+ggsave("../output/ioc_migration.pdf", ioc_migration, width = 6 , height = 12) 
+
+
+# individual opinion change over time - Gender
+toxicity <- discussion_df%>%
+  filter(str_detect(post_title, "gender"))%>%
+  group_by(subreddit)%>%
+  mutate(gender_toxicity = mean(comment_toxicity))%>%
+  slice(1)%>%
+  select(subreddit, gender_toxicity, `Collected comments`, `total_views`)
+
+
+ioc_data_gender <- full_data %>%
+  mutate(issue_attitudes_gender_c1 = ifelse(str_detect(topic_1,"gender"), issues_self_c1_1, NA),
+         issue_attitudes_gender_c1 = ifelse(str_detect(topic_2,"gender"), issues_self_c1_29, issue_attitudes_gender_c1),
+         issue_attitudes_gender_c1 = ifelse(str_detect(topic_3,"gender"), issues_self_c1_30, issue_attitudes_gender_c1),
+         issue_attitudes_gender_c1 = ifelse(str_detect(topic_4,"gender"), issues_self_c1_31, issue_attitudes_gender_c1),
+         issue_attitudes_gender_c1 = ifelse(str_detect(topic_5,"gender"), issues_self_c1_32, issue_attitudes_gender_c1),
+         
+         issue_attitudes_gender_c2 = ifelse(str_detect(topic_1_w3,"gender"), issues_self_c1_1_w3, NA),
+         issue_attitudes_gender_c2 = ifelse(str_detect(topic_2_w3,"gender"), issues_self_c1_29_w3, issue_attitudes_gender_c2),
+         issue_attitudes_gender_c2 = ifelse(str_detect(topic_3_w3,"gender"), issues_self_c1_30_w3, issue_attitudes_gender_c2),
+         issue_attitudes_gender_c2 = ifelse(str_detect(topic_4_w3,"gender"), issues_self_c1_31_w3, issue_attitudes_gender_c2),
+         issue_attitudes_gender_c2 = ifelse(str_detect(topic_5_w3,"gender"), issues_self_c1_32_w3, issue_attitudes_gender_c2),
+         
+         issue_attitudes_gender_c3 = ifelse(str_detect(topic_1_w4,"gender"), issues_self_c1_1_w4, NA),
+         issue_attitudes_gender_c3 = ifelse(str_detect(topic_2_w4,"gender"), issues_self_c1_29_w4, issue_attitudes_gender_c3),
+         issue_attitudes_gender_c3 = ifelse(str_detect(topic_3_w4,"gender"), issues_self_c1_30_w4, issue_attitudes_gender_c3),
+         issue_attitudes_gender_c3 = ifelse(str_detect(topic_4_w4,"gender"), issues_self_c1_31_w4, issue_attitudes_gender_c3),
+         issue_attitudes_gender_c3 = ifelse(str_detect(topic_5_w4,"gender"), issues_self_c1_32_w4, issue_attitudes_gender_c3),
+         
+         issue_attitudes_gender_c4 = ifelse(str_detect(topic_1_w5,"gender"), issues_self_c1_1_w5, NA),
+         issue_attitudes_gender_c4 = ifelse(str_detect(topic_2_w5,"gender"), issues_self_c1_29_w5, issue_attitudes_gender_c4),
+         issue_attitudes_gender_c4 = ifelse(str_detect(topic_3_w5,"gender"), issues_self_c1_30_w5, issue_attitudes_gender_c4),
+         issue_attitudes_gender_c4 = ifelse(str_detect(topic_4_w5,"gender"), issues_self_c1_31_w5, issue_attitudes_gender_c4),
+         issue_attitudes_gender_c4 = ifelse(str_detect(topic_5_w5,"gender"), issues_self_c1_32_w5, issue_attitudes_gender_c4),
+         )%>%
+  mutate(subreddit = subreddit_w1)%>%
+  select(issue_attitudes_gender_w1,issue_attitudes_gender_c1,issue_attitudes_gender_c2,
+         issue_attitudes_gender_c3, issue_attitudes_gender_c4, issue_attitudes_gender_w5, 
+         subreddit, condition, gender, polinterest_w1, leftright_w1, comment_count, ParticipantID)%>%
+  left_join(.,toxicity, by = "subreddit")
+
+
+ioc_long_gender <- ioc_data_gender%>%
+  pivot_longer(cols = -c(subreddit, condition, gender, polinterest_w1, leftright_w1, comment_count, 
+                         ParticipantID, `Collected comments`, total_views, gender_toxicity),
+               names_prefix = "issue_attitudes_gender_",
+               names_to = "wave",
+               values_to = "attitude")%>%
+  mutate(wave = factor(wave, levels = c("w1","c1","c2","c3","c4","w5")),
+         gender = factor(gender),
+         comment_activity = `Collected comments`,
+         comment_count = ifelse(is.na(comment_count), 0, comment_count))%>%
+  mutate(attitude = ifelse(subreddit == "DiscussPolitics6" & wave == "c1", NA, attitude),
+         attitude = ifelse(subreddit == "DiscussPolitics3" & wave == "c1", NA, attitude))%>%
+  na.omit()
+
+# Create a new dataset for line segments
+df_segments <- ioc_long_gender %>%
+  group_by(ParticipantID) %>%
+  mutate(
+    wave_next = lead(wave),
+    value_next = lead(attitude)
+  ) %>%
+  filter(!is.na(wave_next))  # Remove rows where there is no next point
+
+# Plot
+ioc_gender <- ggplot() +
+  geom_segment(data = df_segments,
+               aes(x = wave, y = attitude, xend = wave_next, yend = value_next, color = gender_toxicity),
+               lineend = "round", alpha = 0.3) +  
+  geom_boxplot(data = ioc_long_gender, aes(group = wave, x = wave, y = attitude), alpha = 0.3, color = "black") +
+  geom_jitter(data = ioc_long_gender, aes(x = wave, y = attitude, color = gender_toxicity, size = comment_count), 
+             na.rm = TRUE, alpha = 0.3, width = 0.2, height = 0.2) +  
+  labs(x = "Wave", y = "Attitude", size = "Individual \n comment activity", color = "Toxicity of \n gender discussion") +
+  #guides(color = "none")+
+  theme_bw()+
+  facet_wrap(. ~ subreddit, ncol = 1)+
+  ggtitle("Individual Gender Attitude Trajectories", subtitle = "Agreement with: \"Gender neutral language and pronouns are silly issues.\"")
+
+
+
+combi <- grid.arrange(ioc_migration, ioc_gender, nrow = 1)
+
+ggsave("../output/ioc_gender.pdf", ioc_gender, width = 6 , height = 12) 
+
+```
+
+
+
