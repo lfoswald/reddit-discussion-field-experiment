@@ -1,0 +1,336 @@
+---
+title: "Exploration of Networks"
+subtitle: "Reddit Communities Field Experiment"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=F, warning=F)
+```
+
+Helpful resource for network visualization in R: https://mr.schochastics.net/
+
+```{r}
+library(tidyverse)
+library(readr)
+library(gridExtra)
+library(haven)
+library(RColorBrewer)
+library(igraph)
+library(tidygraph) 
+library(ggraph)
+library(stringr)
+library(kableExtra)
+```
+
+```{r}
+# reddit data
+discussion_data <- read_csv("../data/anon/discussions_anon.csv")
+
+# preprocessed survey data
+sample <- read_csv("../data/anon/scaled_sample.csv")
+
+# full data
+full_data <- read_csv("../data/anon/full_data_waves.csv")
+```
+
+## Comment Graphs conditions 
+```{r, fig.width=12, fig.height=4}
+subreddits <- c("DiscussPolitics1", "DiscussPolitics2", "DiscussPolitics3", 
+                "DiscussPolitics4", "DiscussPolitics5", "DiscussPolitics6")
+
+plots <- list()
+
+for (i in seq_along(subreddits)) {
+  subreddit_name <- subreddits[i]
+  
+  edge_list <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    mutate(to = comment_id,
+           from = parent_id) %>%
+    select(from, to) %>%
+    na.omit()
+  
+  tidy_g <- as_tbl_graph(edge_list, directed = TRUE)
+  
+  community_color <- case_when(
+    i %in% c(1, 6) ~ "#70facb",
+    i %in% c(2, 5) ~ "#6699FF",
+    i %in% c(3, 4) ~ "#29c195"
+  )
+  
+  comment_graph <- ggraph(tidy_g, "tree") +
+    geom_edge_link0(alpha = 0.2) +
+    geom_node_point(color = community_color) +
+    theme_void() 
+  
+  plots[[i]] <- comment_graph
+  
+  ggsave(filename = paste0("../output/", subreddit_name, "_comment_graph_cond.pdf"),
+         plot = comment_graph, width = 10, height = 10)
+}
+
+combi <- grid.arrange(plots[[1]], plots[[2]], plots[[3]], ncol = 3)
+
+```
+
+# Toxicity comment graphs 
+```{r, fig.width=12, fig.height=18}
+subreddits <- c("DiscussPolitics1", "DiscussPolitics2", "DiscussPolitics3", 
+                "DiscussPolitics4", "DiscussPolitics5", "DiscussPolitics6")
+
+plots <- list()
+
+for (i in seq_along(subreddits)) {
+  subreddit_name <- subreddits[i]
+  
+  edge_list <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    mutate(to = comment_id,
+           from = parent_id) %>%
+    select(from, to) %>%
+    na.omit()
+  
+  tidy_g <- as_tbl_graph(edge_list, directed = TRUE)
+  
+  note_attributes <- discussion_data %>%
+    mutate(name = comment_id,
+           type = ifelse(str_detect(parent_id, "t3_"), "post", "comment")) %>%
+    select(name, comment_toxicity, length_comment_char, type)
+  
+  tidy_g <- tidy_g %>%
+    left_join(., note_attributes, by = "name")
+  
+  comment_graph <- ggraph(tidy_g, "tree") +
+    geom_edge_link0(alpha = 0.2) +
+    geom_node_point(shape = 21, aes(fill = comment_toxicity, size = length_comment_char), alpha = 0.8) +
+    guides(alpha = "none", edge_alpha = "none",
+           fill = guide_legend(title = "Toxicity"),
+           size = guide_legend(title = "Length")) +
+    scale_fill_gradient(low = "#6699ff", high = "#bc3455", limits = c(0, 0.6)) +
+    scale_size(range = c(2, 6)) +
+    theme_void() +
+    ggtitle(subreddit_name)
+  
+  plots[[i]] <- comment_graph
+}
+
+combined_plot <- grid.arrange(grobs = plots, ncol = 2, nrow = 3)
+
+ggsave("../output/comment_graphs_combined.pdf", combined_plot, width = 20, height = 20)
+
+```
+
+## User Interaction Network
+```{r, fig.width=12, fig.height=16}
+plots <- list()
+
+for (i in seq_along(subreddits)) {
+  subreddit_name <- subreddits[i]
+  
+  user_edge_list <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    #  'from' as the user who made the parent comment and 'to' as the user who replied
+    mutate(to = ParticipantID, 
+           from = discussion_data$ParticipantID[match(parent_id, discussion_data$comment_id)]) %>%
+    select(from, to) %>%
+    na.omit()  # remove NA where parent_id does not match
+  
+  # get all users who participated in the discussion (even without replies)
+  all_users <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    select(ParticipantID) %>%
+    distinct() %>%
+    rename(name = ParticipantID)
+  
+  user_tidy_g <- as_tbl_graph(user_edge_list, directed = TRUE) %>%
+    activate(nodes) %>%
+    # add all users to ensure isolated nodes are included
+    full_join(all_users, by = "name")
+  
+  user_attributes <- discussion_data %>%
+    group_by(ParticipantID) %>%
+    summarize(comment_count = n(),
+              avg_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>%
+    mutate(name = ParticipantID)  
+  
+  user_tidy_g <- user_tidy_g %>%
+    left_join(., user_attributes, by = "name")
+  
+  user_graph <- ggraph(user_tidy_g, layout = "fr") +  # Fruchterman-Reingold layout
+    geom_edge_link0(alpha = 0.2) +
+    geom_node_point(shape = 21, aes(fill = avg_toxicity, size = comment_count),alpha = 0.8) +
+    guides(alpha = "none", edge_alpha = "none",
+           fill = guide_legend(title = "Avg Toxicity"),
+           size = guide_legend(title = "Comment Count")) +
+    scale_fill_gradient(low = "#6699ff", high = "#bc3455", limits = c(0, 0.5)) +
+    scale_size(range = c(2, 6)) +
+    theme_void() +
+    ggtitle(paste("User Interaction Network -", subreddit_name))
+  
+  plots[[i]] <- user_graph
+}
+
+combined_plot <- grid.arrange(grobs = plots, ncol = 2, nrow = 3)
+
+ggsave("../output/user_interaction_graphs_combined.pdf", combined_plot, width = 20, height = 20)
+
+```
+
+## Degree distributions
+```{r, fig.width=12, fig.height=10}
+
+degree_plots <- list()
+
+for (subreddit_name in subreddits) {
+  
+  user_edge_list <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    mutate(to = ParticipantID, 
+           from = discussion_data$ParticipantID[match(parent_id, discussion_data$comment_id)]) %>%
+    select(from, to) %>%
+    na.omit()  # Remove rows where parent_id does not match
+  
+  user_tidy_g <- as_tbl_graph(user_edge_list, directed = TRUE)
+  
+  degree_data <- user_tidy_g %>%
+    mutate(in_degree = centrality_degree(mode = "in"),
+           out_degree = centrality_degree(mode = "out")) %>%
+    as_tibble()
+  
+  degree_plot <- ggplot(degree_data, aes(x = in_degree, fill = "In-Degree")) +
+    geom_histogram(alpha = 0.6, position = "identity", bins = 30) +
+    geom_histogram(aes(x = out_degree, fill = "Out-Degree"), alpha = 0.6, position = "identity", bins = 30) +
+    scale_fill_manual(values = c("In-Degree" = "#6699ff", "Out-Degree" = "#bc3455")) +
+    labs(title = paste("Degree Centrality Distribution -", subreddit_name),
+         x = "Degree Centrality",
+         y = "Count",
+         fill = "Degree Type") +
+    theme_bw()
+  
+  degree_plots[[subreddit_name]] <- degree_plot
+}
+
+combined_plot <- grid.arrange(grobs = degree_plots, nrow = 3, ncol = 2)
+
+ggsave("../output/combined_degree_centrality_distribution.pdf", combined_plot, width = 15, height = 15)
+
+```
+# Differences in degree distributions? 
+
+### Kolmogorov-Smirnov (KS) Test 
+non-parametric test that compares two distributions and determines whether they come from the same distribution.
+
+Test Metrics:
+1. D-statistic: Maximum difference between the empirical distributions (cumulative distribution functions).
+2. P-value: Probability of observing the D-statistic under the null hypothesis that the two distributions are the same.
+3. ECDFs: Cumulative probability of the data points in each sample.
+```{r}
+# Define subreddit conditions
+control_subreddits <- c("DiscussPolitics1", "DiscussPolitics6")
+moderation_subreddits <- c("DiscussPolitics2", "DiscussPolitics5")
+incentives_subreddits <- c("DiscussPolitics3", "DiscussPolitics4")
+
+combined_degree_data <- data.frame()
+
+for (subreddit_name in subreddits) {
+  
+  user_edge_list <- discussion_data %>%
+    filter(subreddit == subreddit_name) %>%
+    mutate(to = ParticipantID, 
+           from = discussion_data$ParticipantID[match(parent_id, discussion_data$comment_id)]) %>%
+    select(from, to) %>%
+    na.omit()
+  
+  user_tidy_g <- as_tbl_graph(user_edge_list, directed = TRUE)
+  
+  degree_data <- user_tidy_g %>%
+    mutate(in_degree = centrality_degree(mode = "in"),
+           out_degree = centrality_degree(mode = "out")) %>%
+    as_tibble() %>%
+    mutate(subreddit = subreddit_name,
+           condition = case_when(
+             subreddit_name %in% control_subreddits ~ "control",
+             subreddit_name %in% moderation_subreddits ~ "moderation",
+             subreddit_name %in% incentives_subreddits ~ "incentives"
+           ))  
+  
+  combined_degree_data <- rbind(combined_degree_data, degree_data)
+}
+
+#  KS test for pairwise comparisons between conditions
+perform_ks_test <- function(degree_data, centrality_type) {
+  control_data <- degree_data %>% filter(condition == "control") %>% pull(!!centrality_type)
+  moderation_data <- degree_data %>% filter(condition == "moderation") %>% pull(!!centrality_type)
+  incentives_data <- degree_data %>% filter(condition == "incentives") %>% pull(!!centrality_type)
+  
+  ks_tests <- list(
+    control_vs_moderation = ks.test(control_data, moderation_data),
+    control_vs_incentives = ks.test(control_data, incentives_data),
+    moderation_vs_incentives = ks.test(moderation_data, incentives_data)
+  )
+  
+  results <- lapply(ks_tests, function(test) {
+    data.frame(
+      Comparison = names(test),
+      D_statistic = test$statistic,
+      P_value = round(test$p.value, 4),
+      Centrality_Type = centrality_type
+    )
+  })
+  
+  do.call(rbind, results)
+}
+
+ks_in_degree <- perform_ks_test(combined_degree_data, "in_degree")
+ks_out_degree <- perform_ks_test(combined_degree_data, "out_degree")
+
+ks_results <- rbind(ks_in_degree, ks_out_degree)%>%
+  select(-Comparison) %>%
+  distinct()  
+
+html_table <- ks_results %>%
+  kbl(caption = "Pairwise KS Test Results for Degree Centrality Distributions") %>%
+  kable_styling(full_width = F, bootstrap_options = c( "hover", "condensed"))
+
+html_table
+
+save_kable(html_table, file = "../output/ks_test_results.html")
+```
+
+## Degree centrality and toxicity
+```{r, fig.width=12, fig.height=5}
+combined_degree_data <- combined_degree_data%>%
+  mutate(ParticipantID = name)
+
+data <- full_data%>%
+  left_join(., combined_degree_data, by = "ParticipantID")
+
+indegree <- ggplot(data, aes(in_degree, comment_mean_tox, color = comment_mean_tox))+
+  geom_point(aes(fill = comment_mean_tox, size = 2, alpha = 0.5 ))+
+  scale_color_gradient(low = "#6699ff", high = "#bc3455", limits = c(0, 0.6)) +
+  theme_bw()+
+  geom_smooth(method = loess, alpha = 0.1, color = "darkgrey")+
+  ylab("User level average comment toxicity")+
+  xlab("User reply network in-degree")+
+  ggtitle("Toxicity by In-Degree")+
+  guides(size = "none", alpha = "none", fill = "none", color = "none")
+
+outdegree <- ggplot(data, aes(out_degree, comment_mean_tox, color = comment_mean_tox))+
+  geom_point(aes(fill = comment_mean_tox, size = 2, alpha = 0.5 ))+
+  scale_color_gradient(low = "#6699ff", high = "#bc3455", limits = c(0, 0.6)) +
+  theme_bw()+
+  geom_smooth(method = loess, alpha = 0.1, color = "darkgrey")+
+  ylab("User level average comment toxicity")+
+  xlab("User reply network out-degree")+
+  ggtitle("Toxicity by Out-Degree")+
+  guides(size = "none", alpha = "none", fill = "none",
+         color = guide_legend(title="Toxicity"))
+
+degrees <- grid.arrange(indegree, outdegree, nrow = 1, widths = c(4,5))
+
+ggsave("../output/toxicity_degree.pdf", plot = degrees, width = 10, height = 5)
+
+```
+
