@@ -852,6 +852,11 @@ colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolo
 
 # Relative change in commenting activity
 
+```{r}
+#important data: all_data
+#created: daily_summary_act
+```
+
 
 ```{r}
 daily_summary_act <- all_data %>%
@@ -944,6 +949,12 @@ plot(mean_daily_comments$mean_daily_comments_prestudy, mean_daily_comments$mean_
 
 
 ```{r}
+#important data: sample
+#created: s
+
+```
+
+```{r}
 # join mean_daily_comments to sample
 s <- left_join(sample, mean_daily_comments, by = "ParticipantID")
 
@@ -1009,8 +1020,6 @@ plot((incentives$mean_daily_comments_prestudy), (incentives$mean_daily_comments_
 abline(0,1)
 
 ```
-
-
 
 
 ```{r}
@@ -1101,20 +1110,10 @@ dev.off()
 ### Prep the Data
 
 ```{r}
-internal_comments_augmented <- left_join(internal_comments, sample, by = "ParticipantID")
-
-#find the subreddits in each condition
-internal_comments_augmented %>% group_by(subreddit, condition) %>% dplyr::summarize(n = n())
-
-control_1 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics1")
-control_6 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics6")
-moderation_2 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics2")
-moderation_5 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics5")
-incentives_3 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics3")
-incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics4")
+#important data: internal_comments, s
+#created: internal_comments_augmented
 
 ```
-
 
 
 ```{r}
@@ -1139,9 +1138,6 @@ incentives_3 <- internal_comments_augmented %>% filter(subreddit == "DiscussPoli
 incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics4")
 
 ```
-
-
-
 
 
 ```{r}
@@ -1353,10 +1349,9 @@ internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_
 # Investigate Post-Study Survey Measures, like Motivations
 
 ```{r}
-# motives
-# barriers
-# perceptions
-# perceptions_g
+#important data: ps
+#augmented: internal_comments_augmented
+
 ```
 
 
@@ -1460,6 +1455,7 @@ motive_sums <- motive_sums %>% arrange(condition)
 motive_sums
 ```
 
+
 ```{r}
 #make motive_means
 means_express_opinion <- internal_comments_augmented %>% group_by(subreddit) %>% dplyr::summarize(mean_express_opinion = mean(!is.na(`express my opinion`)))
@@ -1509,6 +1505,7 @@ motive_means <- motive_means %>% arrange(condition)
 motive_means
 
 ```
+
 
 ```{r, fig.width=10, fig.height = 6}
 #barplot of mean_express_opinion by subreddit
@@ -1626,46 +1623,19 @@ ps_padded_meanmotives %>% pull(non_na_row_count) %>% hist
 
 
 ```{r}
+#important data: ps_padded_meanmotives, s
+#augmented: s_aug
+
+```
+
+
+```{r}
 #important join
 ps_padded_meanmotives
 
 s_aug <- left_join(ps_padded_meanmotives, s, by = "ParticipantID") %>% 
   mutate(subreddit = as.factor(subreddit))
 s_aug
-```
-
-
-```{r}
-test_mod <- lm(mean_daily_comments_instudy ~ mean_express_my_opinion + mean_express_my_emotions, data = s_aug)
-
-test_mod %>% summary
-
-# a model with all motives as predictors
-lm_all_motives <- lm(mean_daily_comments_instudy ~ mean_inform_others + mean_entertain_others + mean_express_my_opinion + mean_provoke_others + mean_express_my_emotions + mean_connect_with_others + mean_deceive_others + mean_gain_attention + mean_prove_a_point + mean_cause_chaos + mean_bring_attention_to_a_topic + mean_pursuade_others + mean_surprise_or_shock_others + mean_help_researchers + mean_no_barriers + mean_personally_triggered + mean_could_not_add_anything + mean_intimidated_by_sophistication + mean_afraid_of_backlash, data = s_aug)
-
-lm_all_motives %>% summary
-
-#plot variance of each motive
-for(motive in paste0("mean_", motive_barrier_colnames)){
-  print(motive)
-  hist(s_aug[[motive]])
-}
-
-#rank motives by variance
-motive_variances <- sapply(paste0("mean_", motive_barrier_colnames), function(motive) var(s_aug[[motive]]))
-sort(motive_variances, decreasing = TRUE)
-
-s_aug[[motive]]
-
-
-lm_var_motives <- lm(mean_daily_comments_instudy ~ mean_inform_others + mean_help_researchers + mean_pursuade_others + mean_express_my_opinion + mean_bring_attention_to_a_topic + mean_connect_with_others + mean_express_my_emotions +  mean_could_not_add_anything + mean_entertain_others + mean_prove_a_point, data = s_aug)
-
-lm_var_motives <- lm(mean_daily_comments_instudy ~ gender + mean_inform_others + mean_help_researchers + mean_pursuade_others + mean_express_my_opinion, data = s_aug)
-
-lm_var_motives %>% summary
-
-s_aug$gender
-
 ```
 
 
@@ -1690,14 +1660,11 @@ coef(cvfit, s = "lambda.min")
 ```
 
 
-
-
-
-
 # Investigate Scores as an Incentive to Keep Participating
 
 ```{r}
-#discussion_data
+#important data: discussion_data, s_aug
+
 ```
 
 
@@ -1778,14 +1745,10 @@ data_aug
 ```{r}
 # More elaborate model
 # *seems* correctly specified, but I'm not well-trained in temporal models...
-library(lme4)
-# Fit the Poisson GLMM
 model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit), 
                data = data_aug, 
                family = poisson(link = "log"),
                na.action = na.exclude)
-
-# Summarize the model
 summary(model)
 
 ```
