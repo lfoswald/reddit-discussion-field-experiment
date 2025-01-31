@@ -850,7 +850,7 @@ colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolo
 
 
 
-# WS: relative change in commenting activity
+# Relative change in commenting activity
 
 
 ```{r}
@@ -1096,23 +1096,9 @@ dev.off()
 ```
 
 
-# WS: Commenting activity over time (Black Plot)
+# Plot commenting activity over time
 
-```{r}
-#all_data
-#internal_comments
-
-test_ParticipantID <- "4aa8b19edf"
-
-test_comments <- internal_comments %>% filter(ParticipantID == test_ParticipantID) %>% select(created_comment, comment_toxicity, length_comment_char) %>% arrange(created_comment)
-
-test_comments
-
-#plot each comment as a point on a timeline
-plot(test_comments$created_comment, rep(0, length(test_comments$created_comment)), type = "p", pch = "|", col = rgb(0,0,0,.8), xlab = "Date", ylab = "Toxicity")
-
-```
-
+### Prep the Data
 
 ```{r}
 internal_comments_augmented <- left_join(internal_comments, sample, by = "ParticipantID")
@@ -1130,71 +1116,6 @@ incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPoli
 ```
 
 
-```{r}
-#plot each comment from control_1 as a point on a timeline, with a different vertical row for each ParticipantID
-
-#prepare a vector of y-values for each participant
-participant_heights <- 1:length(unique(control_1$ParticipantID))
-names(participant_heights) <- unique(control_1$ParticipantID)
-#reorder by total comment count
-participant_heights <- participant_heights[order(table(control_1$ParticipantID), decreasing = TRUE)]
-
-plot(control_1$created_comment[1], participant_heights[which(names(participant_heights)==control_1$ParticipantID[1])], type = "p", pch = "|", col = rgb(0,0,0,.8), xlab = "Date", ylab = "ParticipantID", ylim = c(0, length(participant_heights)), xlim = c(min(control_1$created_comment), max(control_1$created_comment)))
-
-# color the points by toxicity, red to green
-
-for(i in 2:nrow(control_1)){
-  points(control_1$created_comment[i], participant_heights[which(names(participant_heights)==control_1$ParticipantID[i])], type = "p", pch = "|", col = rgb(control_1$comment_toxicity[i],1-control_1$comment_toxicity[i],0,.8))
-}
-
-```
-
-
-```{r}
-#wrap this up in a function that I can pass any dataframe to
-plot_comments <- function(data, main, bg = "black", xlim = NULL){
-  # filter data to remove NA toxicity values
-  data <- data %>% filter(!is.na(comment_toxicity))
-  participant_heights <- 1:length(unique(data$ParticipantID))
-  names(participant_heights) <- unique(data$ParticipantID)
-  participant_heights <- participant_heights[order(table(data$ParticipantID), decreasing = TRUE)]
-  par(bg = bg)
-  if(is.null(xlim)){
-    xlim <- c(min(data$created_comment), max(data$created_comment))
-  }
-  plot(data$created_comment[1], participant_heights[which(names(participant_heights)==data$ParticipantID[1])], type = "p", pch = "|", col = rgb(0,0,0,.8), xlab = "Date", ylab = "ParticipantID", ylim = c(0, length(participant_heights)), xlim = c(min(data$created_comment), max(data$created_comment)), main = main)
-  
-  for(i in 2:nrow(data)){
-    points(data$created_comment[i], participant_heights[which(names(participant_heights)==data$ParticipantID[i])], type = "p", pch = "|", col = rgb(data$comment_toxicity[i],1-data$comment_toxicity[i],0,.8))
-  }
-}
-
-data = control_1
-ycolumn = "comment_toxicity"
-
-control_1 %>% group_by(ParticipantID) %>% dplyr::summarize(mean_comment_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>% arrange(desc(mean_comment_toxicity))
-
-plot_comments <- function(data, ycolumn, main, bg = "black", xlim = NULL){
-  # filter data to remove NA toxicity values
-  data <- data %>% filter(!is.na(comment_toxicity))
-  participant_heights <- 1:length(unique(data$ParticipantID))
-  #names(participant_heights) <- unique(data$ParticipantID)
-  #participant_heights <- participant_heights[order(table(data$ParticipantID), decreasing = TRUE)]
-  #sort the data by the values in its column with name equal to the ycolumn argument
-  names_for_participant_heights <- data %>% group_by(ParticipantID) %>% dplyr::summarize(height = mean(data[[ycolumn]], na.rm = TRUE)) %>% arrange(desc(height)) %>% pull(ParticipantID)
-  names(participant_heights) <- names_for_participant_heights
-  par(bg = bg)
-  if(is.null(xlim)){
-    xlim <- c(min(data$created_comment), max(data$created_comment))
-  }
-  plot(data$created_comment[1], participant_heights[which(names(participant_heights)==data$ParticipantID[1])], type = "p", pch = "|", col = rgb(0,0,0,.8), xlab = "Date", ylab = "ParticipantID", ylim = c(0, length(participant_heights)), xlim = c(min(data$created_comment), max(data$created_comment)), main = main)
-  
-  for(i in 2:nrow(data)){
-    points(data$created_comment[i], participant_heights[which(names(participant_heights)==data$ParticipantID[i])], type = "p", pch = "|", col = rgb(data$comment_toxicity_rescaled[i],1-data$comment_toxicity_rescaled[i],0,.8))
-  }
-}
-```
-
 
 ```{r}
 #internal_comments_augmented <- left_join(internal_comments, sample, by = "ParticipantID")
@@ -1206,21 +1127,6 @@ toxicity_quantiles <- internal_comments_augmented$comment_toxicity %>% quantile(
 
 internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(comment_toxicity)) %>% mutate(comment_toxicity_rescaled = cut(comment_toxicity, breaks = toxicity_quantiles, labels = F, include.lowest = TRUE)/10)
 
-# internal_comments_augmented$comment_toxicity_rescaled %>% min
-# 
-# length(toxicity_quantiles)
-# length(seq(0, 1, by = 0.1))
-# 
-# cut(internal_comments_augmented$comment_toxicity, breaks = toxicity_quantiles, labels = seq(0, 1, by = 0.1), include.lowest = TRUE)
-# 
-# hist(internal_comments_augmented$comment_toxicity)
-# abline(v = toxicity_quantiles, col = "red")
-# 
-# testcut <- cut(internal_comments_augmented$comment_toxicity, breaks = toxicity_quantiles, labels = F, include.lowest = TRUE)
-# 
-# unique(testcut) %>% length
-# 
-# internal_comments_augmented <- internal_comments_augmented %>% mutate(comment_toxicity_rescaled = NA)
 
 #find the subreddits in each condition
 internal_comments_augmented %>% group_by(subreddit, condition) %>% dplyr::summarize(n = n())
@@ -1234,77 +1140,6 @@ incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPoli
 
 ```
 
-
-```{r}
-internal_comments_augmented$comment_toxicity_rescaled %>% hist
-
-```
-
-
-```{r, fig.height=10, fig.width=8}
-#apply to each dataframe, layout 2*3
-par(mfrow = c(3,2))
-bgcol = "black"
-
-this_ycolumn <- "mean_daily_comments_prestudy"
-#this_ycolumn <- "affective_polarization"
-
-
-plot_comments(control_1, ycolumn = this_ycolumn, main = "Control A", bg = bgcol)
-plot_comments(control_6, ycolumn = this_ycolumn, main = "Control B", bg = bgcol)
-
-plot_comments(moderation_2, ycolumn = this_ycolumn, main = "Moderation A", bg = bgcol)
-plot_comments(moderation_5, ycolumn = this_ycolumn, main = "Moderation B", bg = bgcol)
-
-plot_comments(incentives_3, ycolumn = this_ycolumn, main = "Incentives A", bg = bgcol)
-plot_comments(incentives_4, ycolumn = this_ycolumn, main = "Incentives B", bg = bgcol)
-
-
-```
-
-
-## WS More Color Adjustments
-
-```{r}
-data = control_1
-ycolumn = "comment_mean_tox"
-main = "test plot"
-bg = "black"
-fg = "white"
-xlim = NULL
-
-plot_comments <- function(data, ycolumn, color_column, main, pch = "|", bg = "black", fg = "white", xlim = NULL){
-  # filter data to remove NA toxicity values
-  data <- data %>% filter(!is.na(comment_toxicity))
-  #participant_heights <- 1:length(unique(data$ParticipantID))
-  #names(participant_heights) <- unique(data$ParticipantID)
-  #participant_heights <- participant_heights[order(table(data$ParticipantID), decreasing = TRUE)]
-  #sort the data by the values in its column with name equal to the ycolumn argument
-  #names_for_participant_heights <- data %>% group_by(ParticipantID) %>% dplyr::summarize(height = mean(.[[ycolumn]], na.rm = TRUE)) %>% arrange(desc(height)) %>% pull(ParticipantID)
-  #names(participant_heights) <- names_for_participant_heights
-  ycolumn_sym <- sym(ycolumn)
-  names_for_participant_heights <- data %>% group_by(ParticipantID) %>% dplyr::summarize(height = mean({{ycolumn_sym}}, na.rm = TRUE)) %>% arrange((height)) %>% pull(ParticipantID)
-  #participant_heights <- participant_heights[order(match(names_for_participant_heights, names(participant_heights)))]
-  participant_heights <- 1:length(names_for_participant_heights)
-  names(participant_heights) <- names_for_participant_heights
-  par(bg = bg)
-  par(bg = bg, col.axis = fg, col.lab = fg, col.main = fg, col.sub = fg)
-  if(is.null(xlim)){
-    xlim <- c(min(data$created_comment), max(data$created_comment))
-  }
-  color_column_sym <- sym(color_column)
-  
-  plot(data$created_comment[1], participant_heights[which(names(participant_heights)==data$ParticipantID[1])], type = "p", pch = pch, col = rgb(0,0,0,0), xlab = "Date", ylab = "ParticipantID", ylim = c(0, length(participant_heights)), xlim = c(min(data$created_comment), max(data$created_comment)), main = main)
-  
-  for(i in 1:nrow(data)){
-    points(data$created_comment[i], participant_heights[which(names(participant_heights)==data$ParticipantID[i])], type = "p", pch = pch, col = rgb(data[[color_column_sym]][i],1-data[[color_column_sym]][i],0,.8))
-  }
-  axis(1, col = fg, col.axis = NA, col.ticks = NA) # X-axis
-  axis(2, col = fg, col.axis = NA, col.ticks = NA)
-}
-
-
-```
 
 
 
@@ -1334,207 +1169,7 @@ control_1
 
 
 
-```{r, fig.height=10, fig.width=8}
-#apply to each dataframe, layout 2*3
-par(mfrow = c(3,2), cex = .4)
-bgcol = "black"
-fgcol = "white"
-
-#this_ycolumn <- "mean_daily_comments_prestudy"
-#this_ycolumn <- "affective_polarization"
-#this_ycolumn <- "comment_toxicity"
-#this_ycolumn <- "affective_pol_1"
-#this_ycolumn <- "comment_mean_tox"
-#this_ycolumn <- "in_party_feel"
-#this_ycolumn <- "out_party_feel"
-#this_ycolumn <- "first_comment_posted"
-#this_ycolumn <- "last_comment_posted"
-this_ycolumn <- "gender"
-
-#this_color_column <- "comment_toxicity_rescaled"
-this_color_column <- "length_comment_char_rescaled"
-
-plot_comments(control_1, ycolumn = this_ycolumn, color_column = this_color_column, main = "Control A", bg = bgcol, fg = fgcol, pch = 16)
-plot_comments(control_6, ycolumn = this_ycolumn, color_column = this_color_column, main = "Control B", bg = bgcol, fg = fgcol, pch = 16)
-
-plot_comments(moderation_2, ycolumn = this_ycolumn, color_column = this_color_column, main = "Moderation A", bg = bgcol, fg = fgcol, pch = 16)
-plot_comments(moderation_5, ycolumn = this_ycolumn, color_column = this_color_column, main = "Moderation B", bg = bgcol, fg = fgcol, pch = 16)
-
-plot_comments(incentives_3, ycolumn = this_ycolumn, color_column = this_color_column, main = "Incentives A", bg = bgcol, fg = fgcol, pch = 16)
-plot_comments(incentives_4, ycolumn = this_ycolumn, color_column = this_color_column, main = "Incentives B", bg = bgcol, fg = fgcol, pch = 16)
-
-
-```
-
-## WS: Adaptable Vertical Ordering
-
-
-```{r}
-data = control_1
-ycolumn = "comment_mean_tox"
-main = "test plot"
-bg = "black"
-fg = "white"
-xlim = NULL
-
-data = data %>% group_by(ParticipantID) %>% dplyr::summarize(height = mean(last_comment_posted, na.rm = TRUE)) %>% arrange((height))
-
-#data$gender
-
-#ordered_ids = data %>% group_by(ParticipantID) %>% dplyr::summarize(height = mean(last_comment_posted, na.rm = TRUE)) %>% arrange((height)) %>% pull(ParticipantID)
-
-plot_comments <- function(data, names_for_participant_heights, color_column, main, pch = "|", bg = "black", fg = "white", xlim = NULL){
-  # filter data to remove NA toxicity values
-  data <- data# %>% filter(!is.na(comment_toxicity))
-  names_for_participant_heights <- names_for_participant_heights[which(names_for_participant_heights %in% data$ParticipantID)]
-  participant_heights <- 1:length(names_for_participant_heights)
-  names(participant_heights) <- names_for_participant_heights
-  par(bg = bg)
-  par(bg = bg, col.axis = fg, col.lab = fg, col.main = fg, col.sub = fg)
-  if(is.null(xlim)){
-    xlim <- c(min(data$created_comment), max(data$created_comment))
-  }
-  color_column_sym <- sym(color_column)
-  
-  plot(data$created_comment[1], participant_heights[which(names(participant_heights)==data$ParticipantID[1])], type = "p", pch = pch, col = rgb(0,0,0,0), xlab = "Date", ylab = "ParticipantID", ylim = c(0, length(participant_heights)), xlim = c(min(data$created_comment), max(data$created_comment)), main = main)
-  
-  for(i in 1:nrow(data)){
-    points(data$created_comment[i], participant_heights[which(names(participant_heights)==data$ParticipantID[i])], type = "p", pch = pch, col = rgb(data[[color_column_sym]][i],1-data[[color_column_sym]][i],0,.8))
-  }
-  axis(1, col = fg, col.axis = NA, col.ticks = NA) # X-axis
-  axis(2, col = fg, col.axis = NA, col.ticks = NA)
-}
-
-
-```
-
-
-
-
-```{r, fig.height=10, fig.width=8}
-# #apply to each dataframe, layout 2*3
-par(mfrow = c(3,2), cex = .3)
-bgcol = "black"
-fgcol = "white"
-this_pch = "|"
-
-#this_ycolumn <- "mean_daily_comments_prestudy"
-#this_ycolumn <- "affective_polarization"
-#this_ycolumn <- "comment_toxicity"
-#this_ycolumn <- "affective_pol_1"
-#this_ycolumn <- "comment_mean_tox"
-#this_ycolumn <- "in_party_feel"
-#this_ycolumn <- "out_party_feel"
-#this_ycolumn <- "first_comment_posted"
-#this_ycolumn <- "last_comment_posted"
-#this_ycolumn <- "gender"
-
-this_color_column <- "comment_toxicity_rescaled"
-#this_color_column <- "length_comment_char_rescaled"
-
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), last_comment_posted = mean(last_comment_posted), na.rm = TRUE) %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID)
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), mean_daily_comments_prestudy = mean(mean_daily_comments_prestudy), na.rm = TRUE) %>% arrange(gender, mean_daily_comments_prestudy) %>% pull(ParticipantID)
-
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(polinterest = mean(polinterest), na.rm = TRUE) %>% arrange(polinterest) %>% drop_na() %>% pull(ParticipantID)
-
-# redo this with # comments outside study during study period
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(mean_daily_comments_prestudy = mean(mean_daily_comments_prestudy), na.rm = TRUE) %>% arrange(mean_daily_comments_prestudy) %>% pull(ParticipantID)
-
-ordering_df <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(mean_daily_comments_extstudy = mean(mean_daily_comments_extstudy, na.rm = TRUE)) %>% filter(!is.na(ParticipantID))
-
-ordering_df$mean_daily_comments_extstudy[which(is.nan(ordering_df$mean_daily_comments_extstudy))] <- 0
-
-participant_order <- ordering_df %>% filter() %>% arrange(mean_daily_comments_extstudy) %>% pull(ParticipantID)
-
-these_internal_comments_augmented <- internal_comments_augmented %>% filter(ParticipantID %in% participant_order)
-
-control_1 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics1")
-control_6 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics6")
-moderation_2 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics2")
-moderation_5 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics5")
-incentives_3 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics3")
-incentives_4 <- these_internal_comments_augmented %>% filter(subreddit == "DiscussPolitics4")
-
-plot_comments(control_1,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Control A", bg = bgcol, fg = fgcol, pch = this_pch)
-plot_comments(control_6,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Control B", bg = bgcol, fg = fgcol, pch = this_pch)
-
-plot_comments(moderation_2,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Moderation A", bg = bgcol, fg = fgcol, pch = this_pch)
-plot_comments(moderation_5,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Moderation B", bg = bgcol, fg = fgcol, pch = this_pch)
-
-plot_comments(incentives_3,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Incentives A", bg = bgcol, fg = fgcol, pch = this_pch)
-plot_comments(incentives_4,
-              names_for_participant_heights = participant_order,
-              color_column = this_color_column, main = "Incentives B", bg = bgcol, fg = fgcol, pch = this_pch)
-
-
-```
-
-
-```{r}
-plot(internal_comments_augmented$mean_daily_comments_instudy, internal_comments_augmented$comment_mean_tox)
-
-plot(internal_comments_augmented$comment_mean_tox, internal_comments_augmented$mean_daily_comments_instudy)
-
-
-#to do: make a variable that is "fraction of comments they account for on their subreddit"
-```
-
-
-```{r}
-#simple plot of polinterest vs comment count
-toplot <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(polinterest = mean(polinterest), comment_count = mean(comment_count))
-boxplot(toplot$comment_count ~ toplot$polinterest)
-
-#simple plot of gender vs comment_mean_tox
-toplot <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), comment_mean_tox = mean(comment_mean_tox))
-boxplot(toplot$comment_mean_tox ~ toplot$gender)
-
-#simple plot of affective_polarization vs comment_mean_tox
-toplot <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(affective_polarization = mean(affective_polarization), comment_mean_tox = mean(comment_mean_tox))
-plot(toplot$affective_polarization, toplot$comment_mean_tox)
-
-#simple plot of polinterest vs comment_mean_tox
-toplot <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(polinterest = mean(polinterest), comment_mean_tox = mean(comment_mean_tox))
-boxplot(toplot$comment_mean_tox ~ toplot$polinterest)
-
-#subdivide by gender
-toplot <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(polinterest = mean(polinterest), comment_mean_tox = mean(comment_mean_tox), gender = mean(gender))
-boxplot(comment_mean_tox ~ polinterest + gender, data = toplot)
-
-```
-
-
-```{r}
-internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), comment_mean_tox = mean(comment_mean_tox), na.rm = TRUE) %>% arrange(gender, comment_mean_tox)
-
-
-internal_comments_augmented
-```
-
-
-
-```{r}
-s
-
-#interesting variable: polinterest, trust, affective_polarization, efficacy 
-```
-
-
-
-
-
-
-# Comment Plot
+### Make the Plot
 
 ```{r}
 # Functinos for making the comment plot
@@ -1631,8 +1266,7 @@ add_gradient_legend <- function(color1, color2, labels = c("non-toxic", "toxic")
 ```{r, fig.height=12, fig.width=12}
 #keep
 
-
-#pdf("ws_outputs/plot_comments_toxicity.pdf", width = 12, height = 21)
+pdf("ws_outputs/plot_comments_toxicity.pdf", width = 12, height = 21)
 # #apply to each dataframe, layout 2*3
 par(mfrow = c(3,2), cex = .8)
 bgcol = "black"
@@ -1704,23 +1338,19 @@ add_gradient_legend(
 )
 
 
-#dev.off()
+dev.off()
 
 ```
 
 
-
-```{r, fig.height=10, fig.width=8}
-filtered_data <- internal_comments_augmented %>% filter(gender %in% c(1,2))
-
-plot_comments(filtered_data,
-              names_for_participant_heights = filtered_data %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID) %>% unique(),
-              color_column = this_color_column, main = "Control A", bg = bgcol, fg = fgcol, pch = 16)
+```{r}
+# Fraction of comments each user accounts for on their subreddit
+internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_by(ParticipantID) %>% dplyr::summarize(n = n(), frac = n()/nrow(.)) %>% pull(frac) %>% hist
 
 ```
 
 
-#WS: Investigate Post-Study Survey Measures, like Motivations
+# Investigate Post-Study Survey Measures, like Motivations
 
 ```{r}
 # motives
@@ -1781,7 +1411,7 @@ internal_comments_augmented
 ```
 
 
-## WS Agg number of posts from users with each motive, by server
+### Agg number of posts from users with each motive, by server
 
 ```{r}
 sums_express_opinion <- internal_comments_augmented %>% group_by(subreddit) %>% dplyr::summarize(sum_express_opinion = sum(!is.na(`express my opinion`)))
@@ -1927,7 +1557,7 @@ barplot(motive_means$mean_cause_chaos, names.arg = motive_means$condition, col =
 
 
 
-# WS: commenting by motivation*condition
+### Commenting by motivation*condition
 
 ```{r}
 #first replace all spaces with underscores in the column names
@@ -2061,17 +1691,10 @@ coef(cvfit, s = "lambda.min")
 
 
 
-# Fraction of comments they account for on their subreddit
-
-```{r}
-all_data
-
-internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_by(ParticipantID) %>% dplyr::summarize(n = n(), frac = n()/nrow(.)) %>% pull(frac) %>% hist
-
-```
 
 
-# WS: Investigate Scores as an Incentive to Keep Participating
+
+# Investigate Scores as an Incentive to Keep Participating
 
 ```{r}
 #discussion_data
@@ -2092,7 +1715,7 @@ daily_discussion_data <- discussion_data %>% arrange(created_comment) %>% mutate
 
 
 
-## Implement lagged model
+### Implement lagged model
 
 ```{r}
 # pad out the daily_discussion_data dataframe to have a row for each ParticipantID-day combination
