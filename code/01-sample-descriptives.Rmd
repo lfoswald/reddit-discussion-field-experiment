@@ -1283,13 +1283,6 @@ add_gradient_legend <- function(color1, color2, labels = c("non-toxic", "toxic")
 ```
 
 
-```{r}
-
-filtered_data$score_comment %>% range
-
-filtered_data$score_comment %>% hist(breaks = 50)
-```
-
 
 
 ```{r, fig.height=12, fig.width=12}
@@ -1856,13 +1849,13 @@ coef(cvfit, s = "lambda.min")
 
 
 ```{r}
-discussion_data$score_comment %>% hist
+internal_comments_augmented$score_comment %>% hist
 ```
 
 
 ```{r}
 #arrange by day
-daily_discussion_data <- discussion_data %>% arrange(created_comment) %>% mutate(day = as.Date(created_comment)) %>% group_by(ParticipantID, day) %>% dplyr::summarize(n_comments = n(), mean_score = mean(score_comment), mean_toxicity = mean(comment_toxicity, na.rm=T), sum_score = sum(score_comment, na.rm=T))
+daily_discussion_data <- internal_comments_augmented %>% arrange(created_comment) %>% mutate(day = as.Date(created_comment)) %>% group_by(ParticipantID, day) %>% dplyr::summarize(n_comments = n(), mean_score = mean(score_comment), mean_toxicity = mean(comment_toxicity, na.rm=T), sum_score = sum(score_comment, na.rm=T))
 
 #daily_discussion_data
 ```
@@ -1939,61 +1932,6 @@ model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) +
 summary(model)
 
 ```
-
-
-# Data Cleanup
-
-### Compare data_aug to internal_comments_augmented
-
-```{r}
-# colnames(data_aug) %in% colnames(internal_comments_augmented)
-# colnames(internal_comments_augmented) %in% colnames(data_aug)
-# 
-# 
-# colnames(data_aug)[which(!colnames(data_aug) %in% colnames(internal_comments_augmented))]
-# colnames(internal_comments_augmented)[which(!colnames(internal_comments_augmented) %in% colnames(data_aug))]
-```
-
-
-```{r}
-#data_aug
-daily_discussion_data
-discussion_data
-internal_comments_augmented
-```
-
-
-```{r}
-colnames(discussion_data) %in% colnames(internal_comments_augmented)
-colnames(internal_comments_augmented) %in% colnames(discussion_data)
-
-
-colnames(discussion_data)[which(!colnames(discussion_data) %in% colnames(internal_comments_augmented))]
-colnames(internal_comments_augmented)[which(!colnames(internal_comments_augmented) %in% colnames(discussion_data))]
-```
-
-
-
-```{r}
-internal_comments_augmented
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-
-
 
 
 
