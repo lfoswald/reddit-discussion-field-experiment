@@ -1534,10 +1534,10 @@ s
 #WS: Investigate Post-Study Survey Measures, like Motivations
 
 ```{r}
-motives
-barriers
-perceptions
-perceptions_g
+# motives
+# barriers
+# perceptions
+# perceptions_g
 ```
 
 
@@ -1590,7 +1590,6 @@ ps$ParticipantID %>% unique %>% length
 ```
 
 
-
 ```{r}
 #important join
 internal_comments_augmented <- left_join(internal_comments_augmented, ps %>% filter(survey_week == 4) %>% 
@@ -1600,13 +1599,12 @@ internal_comments_augmented <- left_join(internal_comments_augmented, ps %>% fil
 internal_comments_augmented
 ```
 
-```{r}
 
-
-```
+# Comment Plot
 
 ```{r}
-# a good version of the function
+# Functinos for making the comment plot
+
 color_interpolate <- function(color1, color2, value){
   color1 <- col2rgb(color1)
   color2 <- col2rgb(color2)
@@ -1697,6 +1695,9 @@ add_gradient_legend <- function(color1, color2, labels = c("non-toxic", "toxic")
 
 
 ```{r, fig.height=12, fig.width=12}
+#keep
+
+
 #pdf("ws_outputs/plot_comments_toxicity.pdf", width = 12, height = 21)
 # #apply to each dataframe, layout 2*3
 par(mfrow = c(3,2), cex = .8)
@@ -1707,17 +1708,6 @@ this_point_size = .8
 
 this_xlim = c(lubridate::floor_date(min(internal_comments_augmented$created_comment), unit = "day"), lubridate::ceiling_date(max(internal_comments_augmented$created_comment), unit = "day"))
 
-#this_ycolumn <- "mean_daily_comments_prestudy"
-#this_ycolumn <- "affective_polarization"
-#this_ycolumn <- "comment_toxicity"
-#this_ycolumn <- "affective_pol_1"
-#this_ycolumn <- "comment_mean_tox"
-#this_ycolumn <- "in_party_feel"
-#this_ycolumn <- "out_party_feel"
-#this_ycolumn <- "first_comment_posted"
-#this_ycolumn <- "last_comment_posted"
-#this_ycolumn <- "gender"
-
 this_color_column <- "comment_toxicity_rescaled"
 color1 = "green"
 color2 = "red"
@@ -1725,9 +1715,6 @@ color2 = "red"
 # this_color_column <- "length_comment_char_rescaled"
 # color1 = "dodgerblue"
 # color2 = "gold"
-
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), last_comment_posted = mean(last_comment_posted), na.rm = TRUE) %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID)
-#participant_order <- internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(gender = mean(gender), mean_daily_comments_prestudy = mean(mean_daily_comments_prestudy), na.rm = TRUE) %>% arrange(gender, mean_daily_comments_prestudy) %>% pull(ParticipantID)
 
 # filtered_data <- internal_comments_augmented %>% filter(gender %in% c(1,2))
 # participant_order <- filtered_data %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID) %>% unique()
@@ -1783,7 +1770,7 @@ add_gradient_legend(
 )
 
 
-dev.off()
+#dev.off()
 
 ```
 
@@ -1900,10 +1887,6 @@ motive_means
 ```
 
 ```{r, fig.width=10, fig.height = 6}
-# barplot of means by subreddits
-
-
-
 #barplot of mean_express_opinion by subreddit
 barplot(motive_means$mean_express_opinion, names.arg = motive_means$condition, col = "grey", main = "Mean Express Opinion by Subreddit", xlab = "Subreddit", ylab = "Mean Express Opinion")
 
@@ -1950,64 +1933,16 @@ barplot(motive_means$mean_cause_chaos, names.arg = motive_means$condition, col =
 
 
 
-# WS: Inspect incentivized posting-per-day (more than 1 has particular implications here)
-
-```{r}
-internal_comments_augmented
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-#names(internal_comments_augmented) <- gsub(" ", "_", names(internal_comments_augmented))
-```
-
-
 # WS: commenting by motivation*condition
-
 
 ```{r}
 #first replace all spaces with underscores in the column names
 names(ps) <- gsub(" ", "_", names(ps))
 names(s) <- gsub(" ", "_", names(s))
-
-
 ```
 
 
 ```{r}
-#ps$express_my_opinion %>% unique
-
 motive_barrier_colnames <- c("inform_others","entertain_others",
 "express_my_opinion","provoke_others","express_my_emotions",
 "connect_with_others","deceive_others","gain_attention",
@@ -2038,8 +1973,6 @@ ps
 
 ```{r}
 # pad out the ps dataframe to have a row for each ParticipantID-survey_week combination
-# first, get all unique ParticipantIDs
-#unique_participant_ids <- ps$ParticipantID %>% unique()
 ps_padded <- ps %>%
   complete(ParticipantID, survey_week) 
 
@@ -2048,10 +1981,6 @@ ps_padded
 
 
 ```{r}
-# #sum motives across waves
-# ps_padded_summotives <- ps_padded %>% group_by(ParticipantID) %>% dplyr::summarize(sum_inform_others = sum(inform_others), last_week_present =, sum_entertain_others = sum(entertain_others), sum_express_my_opinion = sum(express_my_opinion), sum_provoke_others = sum(provoke_others), sum_express_my_emotions = sum(express_my_emotions), sum_connect_with_others = sum(connect_with_others), sum_deceive_others = sum(deceive_others), sum_gain_attention = sum(gain_attention), sum_prove_a_point = sum(prove_a_point), sum_cause_chaos = sum(cause_chaos), sum_bring_attention_to_a_topic = sum(bring_attention_to_a_topic), sum_pursuade_others = sum(pursuade_others), sum_surprise_or_shock_others = sum(surprise_or_shock_others), sum_help_researchers = sum(help_researchers), sum_no_barriers = sum(no_barriers), sum_personally_triggered = sum(personally_triggered), sum_could_not_add_anything = sum(could_not_add_anything), sum_intimidated_by_sophistication = sum(intimidated_by_sophistication), sum_afraid_of_backlash = sum(afraid_of_backlash))
-# ps_padded_summotives
-
 #mean motives across waves, dropping NAs
 W4_completers <- ps_padded %>% filter(survey_week == 4) %>% filter(!is.na(StartDate)) %>% pull(ParticipantID) %>% unique()
 #W4_completers
@@ -2137,103 +2066,13 @@ coef(cvfit, s = "lambda.min")
 ```
 
 
-```{r}
-lm_int_test <- lm(mean_daily_comments_instudy ~ mean_pursuade_others*condition, data = s_aug)
-lm_int_test %>% summary
 
-#implement lme4 version with random intercepts at the subreddit level
-library(lme4)
-lmer_int_test <- lmer(mean_daily_comments_instudy ~ mean_pursuade_others*condition + (1 | subreddit), data = s_aug)
-
-lmer_int_test
-
-#inspect
-summary(lmer_int_test)
-```
-
+# Fraction of comments they account for on their subreddit
 
 ```{r}
-library(psych)
-
-#reduce dimensionality of motives with PCA
-motive_pca <- psych::pca(s_aug %>% select("mean_inform_others", "mean_entertain_others", "mean_express_my_opinion", "mean_provoke_others", "mean_express_my_emotions", "mean_connect_with_others", "mean_deceive_others", "mean_gain_attention", "mean_prove_a_point", "mean_cause_chaos", "mean_bring_attention_to_a_topic", "mean_pursuade_others", "mean_surprise_or_shock_others", "mean_help_researchers", "mean_no_barriers", "mean_personally_triggered", "mean_could_not_add_anything", "mean_intimidated_by_sophistication", "mean_afraid_of_backlash"), nfactors = 4)
-
-motive_pca
-
-#extract scores and join them to s_aug
-s_aug <- cbind(s_aug, motive_pca$scores)
-
-s_aug
-
-```
-
-
-```{r}
-lm_int_test <- lm(mean_daily_comments_instudy ~ RC1*condition, data = s_aug)
-lm_int_test %>% summary
-
-```
-
-
-
-# Analyze First-Mover Effect on a Daily Basis
-
-Idea: daily toxicity is a function of the toxicity of the first post(s) of the day
-
-```{r}
-#discussion_data
-internal_comments
-
-```
-
-
-```{r}
-internal_comments_ws <- discussion_data %>% mutate(source = "internal")%>%
-  filter(created_comment > as_datetime("2024-06-10") & created_comment < as_datetime("2024-07-06"))
-
-internal_comments_ws
-
-# ParticipantID comment_id parent_id
-
-```
-
-
-```{r}
-internal_comments_ws %>% pull(parent_id) %>% unique()
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-# fraction of comments they account for on their subreddit
-
-```{r}
-
 all_data
 
-internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_by(ParticipantID) %>% dplyr::summarize(n = n(), frac = n()/nrow(.))
-
-```
-
-```{r}
-
+internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_by(ParticipantID) %>% dplyr::summarize(n = n(), frac = n()/nrow(.)) %>% pull(frac) %>% hist
 
 ```
 
@@ -2241,46 +2080,20 @@ internal_comments_augmented %>% filter(subreddit=="DiscussPolitics1") %>% group_
 # WS: Investigate Scores as an Incentive to Keep Participating
 
 ```{r}
-internal_comments_augmented
-
-```
-
-
-```{r}
-#plot(internal_comments_augmented$score, internal_comments_augmented$comment_toxicity)
-
-```
-
-
-```{r}
-discussion_data
-
-```
-
-
-```{r}
-#discussion_data$created_post %>% unique %>% hist(breaks = "hour", freq = T)
-
-discussion_data$created_comment %>% unique %>% hist(breaks = "hour", freq = T) #this is the one to use
+#discussion_data
 ```
 
 
 ```{r}
 discussion_data$score_comment %>% hist
-
-
-
-
 ```
 
 
 ```{r}
 #arrange by day
-
 daily_discussion_data <- discussion_data %>% arrange(created_comment) %>% mutate(day = as.Date(created_comment)) %>% group_by(ParticipantID, day) %>% dplyr::summarize(n_comments = n(), mean_score = mean(score_comment), mean_toxicity = mean(comment_toxicity, na.rm=T), sum_score = sum(score_comment, na.rm=T))
 
-daily_discussion_data
-
+#daily_discussion_data
 ```
 
 
@@ -2288,7 +2101,7 @@ daily_discussion_data
 ## Implement lagged model
 
 ```{r}
-
+# pad out the daily_discussion_data dataframe to have a row for each ParticipantID-day combination
 daily_discussion_data_complete <- daily_discussion_data %>% ungroup %>% complete(ParticipantID, day)
 
 daily_discussion_data_complete$n_comments[which(is.na(daily_discussion_data_complete$n_comments))] <- 0
@@ -2322,48 +2135,18 @@ data %>% select(-mean_score)
 
 
 ```{r}
-#star
 library(lme4)
-# Fit the Poisson GLMM
+```
+
+
+```{r}
+#basic model
 model <- glmer(n_comments ~ mean_score_lag + (1 | ParticipantID), 
                data = data, 
                family = poisson(link = "log"),
                na.action = na.exclude)
 
-# Summarize the model
 summary(model)
-
-
-```
-
-```{r}
-# #try predicting toxicity
-# library(lme4)
-# # Fit the Poisson GLMM
-# model <- glmer(mean_toxicity ~ mean_score_lag + (1 | ParticipantID), 
-#                data = data %>% filter(!is.na(mean_toxicity)), 
-#                family = poisson(link = "log"),
-#                na.action = na.exclude)
-# 
-# # Summarize the model
-# summary(model)
-
-
-```
-
-
-```{r}
-library(lme4)
-# Fit the Poisson GLMM
-model <- glmer(n_comments ~ sum_score_lag + (1 | ParticipantID), 
-               data = data, 
-               family = poisson(link = "log"),
-               na.action = na.exclude)
-
-# Summarize the model
-summary(model)
-
-
 ```
 
 
@@ -2376,7 +2159,8 @@ data_aug
 
 
 ```{r}
-# This model *seems* correctly specified
+# More elaborate model
+# *seems* correctly specified, but I'm not well-trained in temporal models...
 library(lme4)
 # Fit the Poisson GLMM
 model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit), 
@@ -2391,15 +2175,9 @@ summary(model)
 
 
 
-```{r}
-# Interaction between score and condition: this is just confusing
-model <- glmer(n_comments ~ mean_score_lag*condition + polinterest + (1 | ParticipantID) + (1 | subreddit), 
-               data = data_aug, 
-               family = poisson(link = "log"),
-               na.action = na.exclude)
-summary(model)
-```
 
+# Other Ideas
 
-
+Analyze First-Mover Effect on a Daily Basis
+Idea: daily toxicity is a function of the toxicity of the first post(s) of the day
 
