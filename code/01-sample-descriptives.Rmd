@@ -853,17 +853,17 @@ colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolo
 # Relative change in commenting activity
 
 ```{r}
-#important data: all_data
-#created: daily_summary_act
+#important data: daily_summary_act
+#created: mean_daily_comments
 ```
 
 
 ```{r}
-daily_summary_act <- all_data %>%
-  group_by(source, ParticipantID, created_comment) %>%
-  dplyr::summarize(comment_volume = n(), 
-    avg_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>%
-  ungroup()
+# daily_summary_act <- all_data %>%
+#   group_by(source, ParticipantID, created_comment) %>%
+#   dplyr::summarize(comment_volume = n(), 
+#     avg_toxicity = mean(comment_toxicity, na.rm = TRUE)) %>%
+#   ungroup()
 
 
 comment_data_ranges <- daily_summary_act %>% group_by(ParticipantID) %>% dplyr::summarize(earliest_comment = min(created_comment), latest_comment = max(created_comment))
@@ -937,14 +937,6 @@ mean_prestudy_commentprob <- daily_summary_act_complete %>%
 mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_int_commentprob, by = "ParticipantID")
 mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_ext_commentprob, by = "ParticipantID")
 mean_daily_comments <- left_join(mean_daily_comments, mean_prestudy_commentprob, by = "ParticipantID")
-```
-
-
-
-```{r}
-#plot the two variables in a square plot
-par(pty="s")
-plot(mean_daily_comments$mean_daily_comments_prestudy, mean_daily_comments$mean_daily_comments_instudy, xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Mean daily comments pre-study vs in study")
 ```
 
 
@@ -1260,7 +1252,83 @@ add_gradient_legend <- function(color1, color2, labels = c("non-toxic", "toxic")
 
 
 ```{r, fig.height=12, fig.width=12}
-#keep
+#print version
+
+# #apply to each dataframe, layout 2*3
+par(mfrow = c(3,2), cex = .8)
+bgcol = "black"
+fgcol = "white"
+pch = "|"
+this_point_size = .8
+
+this_xlim = c(lubridate::floor_date(min(internal_comments_augmented$created_comment), unit = "day"), lubridate::ceiling_date(max(internal_comments_augmented$created_comment), unit = "day"))
+
+this_color_column <- "comment_toxicity_rescaled"
+color1 = "green"
+color2 = "red"
+
+# this_color_column <- "length_comment_char_rescaled"
+# color1 = "dodgerblue"
+# color2 = "gold"
+
+# filtered_data <- internal_comments_augmented %>% filter(gender %in% c(1,2))
+# participant_order <- filtered_data %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(polarized))
+# participant_order <- filtered_data %>% arrange(polarized, last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(constructive))
+# participant_order <- filtered_data %>% arrange(constructive, last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(respectful))
+# participant_order <- filtered_data %>% arrange(respectful, last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+filtered_data <- internal_comments_augmented
+participant_order <- filtered_data %>% arrange(last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+control_1 <- filtered_data %>% filter(subreddit == "DiscussPolitics1")
+control_6 <- filtered_data %>% filter(subreddit == "DiscussPolitics6")
+moderation_2 <- filtered_data %>% filter(subreddit == "DiscussPolitics2")
+moderation_5 <- filtered_data %>% filter(subreddit == "DiscussPolitics5")
+incentives_3 <- filtered_data %>% filter(subreddit == "DiscussPolitics3")
+incentives_4 <- filtered_data %>% filter(subreddit == "DiscussPolitics4")
+
+plot_comments(control_1,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Control A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(control_6,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Control B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+plot_comments(moderation_2,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Moderation A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(moderation_5,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Moderation B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+plot_comments(incentives_3,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Incentives A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(incentives_4,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Incentives B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+# Add the gradient legend
+add_gradient_legend(
+  color1 = "green", 
+  color2 = "red", 
+  x = mean(filtered_data$created_comment), 
+  y = 0,
+  width = diff(range(filtered_data$created_comment)) / 5, 
+  height = 1
+)
+
+```
+
+
+```{r, fig.height=12, fig.width=12}
+#save version
 
 pdf("ws_outputs/plot_comments_toxicity.pdf", width = 12, height = 21)
 # #apply to each dataframe, layout 2*3
@@ -1752,6 +1820,60 @@ model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) +
 summary(model)
 
 ```
+
+
+# Data Cleanup
+
+### Compare data_aug to internal_comments_augmented
+
+```{r}
+# colnames(data_aug) %in% colnames(internal_comments_augmented)
+# colnames(internal_comments_augmented) %in% colnames(data_aug)
+# 
+# 
+# colnames(data_aug)[which(!colnames(data_aug) %in% colnames(internal_comments_augmented))]
+# colnames(internal_comments_augmented)[which(!colnames(internal_comments_augmented) %in% colnames(data_aug))]
+```
+
+
+```{r}
+#data_aug
+daily_discussion_data
+discussion_data
+internal_comments_augmented
+```
+
+
+```{r}
+colnames(discussion_data) %in% colnames(internal_comments_augmented)
+colnames(internal_comments_augmented) %in% colnames(discussion_data)
+
+
+colnames(discussion_data)[which(!colnames(discussion_data) %in% colnames(internal_comments_augmented))]
+colnames(internal_comments_augmented)[which(!colnames(internal_comments_augmented) %in% colnames(discussion_data))]
+```
+
+
+
+```{r}
+internal_comments_augmented
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
 
 
 
