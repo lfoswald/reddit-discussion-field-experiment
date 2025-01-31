@@ -1128,11 +1128,60 @@ internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(com
 
 
 ```{r}
+internal_comments_augmented %>% filter(score_comment == 0)
+
+```
+
+
+```{r}
 # continue augmenting
+# rescale comment_score
+
+#monotonic quantile version
+score_comment_quantiles <- internal_comments_augmented$score_comment %>% quantile(probs = seq(0, 1, by = 0.25), na.rm = TRUE)
+internal_comments_augmented <- internal_comments_augmented %>% mutate(score_comment_rescaled_quantile = cut(score_comment, breaks = score_comment_quantiles, labels = F, include.lowest = TRUE)/4)
+
+#simple version
+internal_comments_augmented <- internal_comments_augmented %>% mutate(score_comment_rescaled = (score_comment - min(score_comment))/(max(score_comment) - min(score_comment)))
+
+#polar version
+scale_polar_to_01 <- function(x) {
+  
+  # Initialize vector to hold rescaled values
+  x_scaled <- numeric(length(x))
+  
+  # Identify the minimum of negatives and maximum of positives
+  min_neg <- min(x[x < 0], na.rm = TRUE)
+  max_pos <- max(x[x > 0], na.rm = TRUE)
+  
+  # Rescale negatives to [0, 0.5)
+  # Map from [min_neg, 0] --> [0, 0.5)
+  x_scaled[x < 0] <- 0.5 * (x[x < 0] - min_neg) / (0 - min_neg)
+  
+  # Any exact zeros go to 0.5
+  x_scaled[x == 0] <- 0.5
+  
+  # Rescale positives to (0.5, 1]
+  # Map from [0, max_pos] --> [0.5, 1]
+  x_scaled[x > 0] <- 0.5 + 0.5 * (x[x > 0] / max_pos)
+  
+  return(x_scaled)
+}
+
+internal_comments_augmented <- internal_comments_augmented %>% mutate(score_comment_rescaled_polar = scale_polar_to_01(score_comment))
+
+
+hist(internal_comments_augmented$score_comment_rescaled)
+hist(internal_comments_augmented$score_comment_rescaled_polar)
+```
+
+
+```{r}
+# continue augmenting
+# add rescaled length of comment
 
 length_comment_char_quantiles <- internal_comments_augmented$length_comment_char %>% quantile(probs = seq(0, 1, by = 0.1), na.rm = TRUE)
 
-# add rescaled length of comment
 internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(length_comment_char)) %>% mutate(length_comment_char_rescaled = cut(length_comment_char, breaks = length_comment_char_quantiles, labels = F, include.lowest = TRUE)/10)
 
 # add first and last comment datetimes
@@ -1234,6 +1283,14 @@ add_gradient_legend <- function(color1, color2, labels = c("non-toxic", "toxic")
 ```
 
 
+```{r}
+
+filtered_data$score_comment %>% range
+
+filtered_data$score_comment %>% hist(breaks = 50)
+```
+
+
 
 ```{r, fig.height=12, fig.width=12}
 #print version
@@ -1312,74 +1369,80 @@ add_gradient_legend(
 
 
 
-```{r}
-data = control_6
-names_for_participant_heights = participant_order
-color_column = this_color_column
-main = "Control B"
-bg = bgcol
-fg = fgcol
-pch = pch
-color1 = color1
-color2 = color2
-xlim = this_xlim
-point_size = this_point_size
 
 
-# Filter data to remove NA toxicity values
-data <- data
-names_for_participant_heights <- names_for_participant_heights[which(names_for_participant_heights %in% data$ParticipantID)]
-participant_heights <- 1:length(names_for_participant_heights)
-names(participant_heights) <- names_for_participant_heights
-par(bg = bg)
-par(bg = bg, col.axis = fg, col.lab = fg, col.main = fg, col.sub = fg)
+```{r, fig.height=18, fig.width=12}
+#print version
 
-if(is.null(xlim)){
-  xlim <- c(min(data$created_comment), max(data$created_comment))
-}
+# #apply to each dataframe, layout 2*3
+par(mfrow = c(3,2), cex = .8)
+bgcol = "black"
+fgcol = "white"
+pch = "|"
+this_point_size = .7
 
-color_column_sym <- sym(color_column)
+this_xlim = c(lubridate::floor_date(min(internal_comments_augmented$created_comment), unit = "day"), lubridate::ceiling_date(max(internal_comments_augmented$created_comment), unit = "day"))
 
-# Initialize the plot
-plot(data$created_comment[1], participant_heights[which(names(participant_heights) == data$ParticipantID[1])], 
-     type = "p", pch = pch, col = rgb(0, 0, 0, 0), 
-     xlab = "Date", ylab = "ParticipantID", 
-     ylim = c(0, length(participant_heights)), 
-     xlim = xlim, 
-     main = main, 
-     yaxt = "n")
+this_color_column <- "score_comment_rescaled_quantile"
+color1 = "dodgerblue"
+color2 = "forestgreen"
 
-# Add vertical lines at midnight Pacific time
-date_range <- c(lubridate::floor_date(min(data$created_comment), unit = "day"), 
-                lubridate::ceiling_date(max(data$created_comment), unit = "day"))
-date_range <- seq(date_range[1], date_range[2], by = "day")
-date_range_pacific <- with_tz(date_range, tzone = "America/Los_Angeles")
-for(i in date_range_pacific){
-  abline(v = i, col = rgb(1, 1, 1, .2), lty = 1)
-}
+color1 = "dodgerblue"
 
-# Plot posts in rows with adjustable point size
-for(i in 1:nrow(data)){
-  points(data$created_comment[i], 
-         participant_heights[which(names(participant_heights) == data$ParticipantID[i])], 
-         type = "p", pch = pch, 
-         col = color_interpolate(color1, color2, data[[color_column_sym]][i]), 
-         cex = point_size) # Adjust point size here
-}
+# filtered_data <- internal_comments_augmented %>% filter(gender %in% c(1,2))
+# participant_order <- filtered_data %>% arrange(gender, last_comment_posted) %>% pull(ParticipantID) %>% unique()
 
-# Annotate each row with the ParticipantID in small text right-aligned to the y-axis
-par(xpd = TRUE)
-for(i in participant_heights){
-  text(x = xlim[1], y = i, labels = names(participant_heights)[i], pos = 2, cex = 0.5, col = fg)
-}
-par(xpd = FALSE)
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(polarized))
+# participant_order <- filtered_data %>% arrange(polarized, last_comment_posted) %>% pull(ParticipantID) %>% unique()
 
-axis(1, col = fg, col.axis = NA, col.ticks = NA) # X-axis
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(constructive))
+# participant_order <- filtered_data %>% arrange(constructive, last_comment_posted) %>% pull(ParticipantID) %>% unique()
 
-data[i,]
+# filtered_data <- internal_comments_augmented %>% filter(!is.na(respectful))
+# participant_order <- filtered_data %>% arrange(respectful, last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+filtered_data <- internal_comments_augmented %>% filter(!is.na(score_comment))
+participant_order <- filtered_data %>% arrange(last_comment_posted) %>% pull(ParticipantID) %>% unique()
+
+control_1 <- filtered_data %>% filter(subreddit == "DiscussPolitics1")
+control_6 <- filtered_data %>% filter(subreddit == "DiscussPolitics6")
+moderation_2 <- filtered_data %>% filter(subreddit == "DiscussPolitics2")
+moderation_5 <- filtered_data %>% filter(subreddit == "DiscussPolitics5")
+incentives_3 <- filtered_data %>% filter(subreddit == "DiscussPolitics3")
+incentives_4 <- filtered_data %>% filter(subreddit == "DiscussPolitics4")
+
+plot_comments(control_1,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Control A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(control_6,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Control B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+plot_comments(moderation_2,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Moderation A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(moderation_5,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Moderation B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+plot_comments(incentives_3,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Incentives A", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+plot_comments(incentives_4,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "Incentives B", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+# Add the gradient legend
+add_gradient_legend(labels = c("Low", "High"),
+  color1 = "dodgerblue", 
+  color2 = "gold", 
+  x = mean(filtered_data$created_comment), 
+  y = 0,
+  width = diff(range(filtered_data$created_comment)) / 5, 
+  height = 1
+)
+
 ```
-
-
 
 
 
