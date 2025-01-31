@@ -838,9 +838,10 @@ ggsave("../output/differences_perception.pdf", differences, width = 6 , height =
 
 #WS Additions Start
 
-##WS set useful values
 
 ```{r}
+#WS set useful values
+
 colors <- c(control = "gray", incentives = "#29c195", moderation = "#6699FF")
 
 #adjust alphas to .7
@@ -849,15 +850,7 @@ colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolo
 
 
 
-
-
 # WS: relative change in commenting activity
-
-
-```{r}
-#all_data %>% pull(source) %>%
-
-```
 
 
 ```{r}
@@ -986,19 +979,6 @@ legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(co
 #draw a diagonal line
 abline(0,1)
 
-# # zoom in to the 0,4 interval
-# plot(control$mean_daily_comments_prestudy, control$mean_daily_comments_instudy, xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'], xlim = c(0,4), ylim = c(0,4))
-# points(moderation$mean_daily_comments_prestudy, moderation$mean_daily_comments_instudy, pch = 16, col = colors['moderation'])
-# points(incentives$mean_daily_comments_prestudy, incentives$mean_daily_comments_instudy, pch = 16, col = colors['incentives'])
-# legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 16, bty = "n")
-# abline(0,1)
-# 
-# # zoom in to the 0,2 interval
-# plot(control$mean_daily_comments_prestudy, control$mean_daily_comments_instudy, xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'], xlim = c(0,2), ylim = c(0,2))
-# points(moderation$mean_daily_comments_prestudy, moderation$mean_daily_comments_instudy, pch = 16, col = colors['moderation'])
-# points(incentives$mean_daily_comments_prestudy, incentives$mean_daily_comments_instudy, pch = 16, col = colors['incentives'])
-# legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 16, bty = "n")
-# abline(0,1)
 ```
 
 
@@ -1067,176 +1047,12 @@ abline(0,-1)
 ```
 
 
-```{r, fig.width=8, fig.height=10}
-# bin differences by intervals of 1 in pre-study comments
-s <- s %>% mutate(prestudy_unit_bin = cut(mean_daily_comments_prestudy, breaks = seq(0, 13, by = 1)))
 
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(prestudy_unit_bin, prestudy_instudy_comment_difference) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(prestudy_unit_bin, prestudy_instudy_comment_difference) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(prestudy_unit_bin, prestudy_instudy_comment_difference) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(prestudy_unit_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(prestudy_unit_bin = bins)
-
-par(mfrow = c(3,1))
-
-boxplot(prestudy_instudy_comment_difference ~ prestudy_unit_bin, data = control, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'], ylim = c(-10,10))
-abline(h = 0, lty = 2)
-abline(0,-1)
-
-plot(prestudy_instudy_comment_difference ~ prestudy_unit_bin, data = moderation, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['moderation'], ylim = c(-10,10))
-abline(h = 0, lty = 2)
-abline(0,-1)
-
-plot(prestudy_instudy_comment_difference ~ prestudy_unit_bin, data = incentives, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['incentives'], ylim = c(-10,10))
-abline(h = 0, lty = 2)
-abline(0,-1)
-
-
-```
 
 
 ```{r, fig.width=8, fig.height=10}
-# make bins based on quantiles
-pdf("ws_outputs/comment_diff_by_prestudy_quantile.pdf", width = 8, height = 10)
-
-s <- s %>% mutate(prestudy_quantile_bin = cut(mean_daily_comments_prestudy, breaks = quantile(mean_daily_comments_prestudy, probs = seq(0, 1, by = 0.2), na.rm = TRUE)))
-
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(prestudy_quantile_bin, prestudy_instudy_comment_difference) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(prestudy_quantile_bin, prestudy_instudy_comment_difference) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(prestudy_quantile_bin, prestudy_instudy_comment_difference) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(prestudy_quantile_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(prestudy_quantile_bin = bins)
-
-par(mfrow = c(3,1))
-this_ylim = c(-10,5)
-#this_ylim = NULL
-
-boxplot(prestudy_instudy_comment_difference ~ prestudy_quantile_bin, data = control, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'], ylim =this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(prestudy_instudy_comment_difference ~ prestudy_quantile_bin, data = moderation, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['moderation'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(prestudy_instudy_comment_difference ~ prestudy_quantile_bin, data = incentives, xlab = "Mean daily comments pre-study", ylab = "Difference in comments in-study vs pre-study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['incentives'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
-
-dev.off()
-
-```
-
-## WS: Make a Version that is "Probability of Commenting At All on a Given Day"
-
-
-```{r, fig.width=8, fig.height=10}
-# calculated the probability of commenting at all on a given day above, use it now
-
-# duringstudy_int_daily_commentprob
-# prestudy_daily_commentprob
-
-pdf("ws_outputs/commentdailyprob_diff_by_prestudy_quantile.pdf", width = 8, height = 10)
-
-s <- s %>% mutate(prestudy_quantile_bin = cut(prestudy_daily_commentprob, breaks = quantile(prestudy_daily_commentprob, probs = seq(0, 1, by = 0.2), na.rm = TRUE))) %>% mutate(prestudy_instudy_commentprob_difference = (duringstudy_int_daily_commentprob - prestudy_daily_commentprob))
-
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(prestudy_quantile_bin, prestudy_instudy_commentprob_difference) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(prestudy_quantile_bin, prestudy_instudy_commentprob_difference) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(prestudy_quantile_bin, prestudy_instudy_commentprob_difference) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(prestudy_quantile_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(prestudy_quantile_bin = bins)
-
-par(mfrow = c(3,1))
-this_ylim = c(-1,1)
-this_xlab = "Pre-Study Probability of Commenting At All on a Given Day"
-this_ylab = "P(comment > 0/day | int) - P(comment > 0/day | ext)"
-this_main = "Probability of Commenting At least Once per Day"
-
-boxplot(prestudy_instudy_commentprob_difference ~ prestudy_quantile_bin, data = control, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['control'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(prestudy_instudy_commentprob_difference ~ prestudy_quantile_bin, data = moderation, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['moderation'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(prestudy_instudy_commentprob_difference ~ prestudy_quantile_bin, data = incentives, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['incentives'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
-
-
-dev.off()
-
-```
-
-
-```{r, fig.width=8, fig.height=10}
-# version with external duringstudy reference point
-
-s <- s %>% mutate(duringstudy_ext_quantile_bin = cut(duringstudy_ext_daily_commentprob, breaks = quantile(duringstudy_ext_daily_commentprob, probs = seq(0, 1, by = 0.2), na.rm = TRUE))) %>% mutate(extstudy_instudy_commentprob_difference = (duringstudy_int_daily_commentprob - duringstudy_ext_daily_commentprob))
-
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(duringstudy_ext_quantile_bin, extstudy_instudy_commentprob_difference) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(duringstudy_ext_quantile_bin, extstudy_instudy_commentprob_difference) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(duringstudy_ext_quantile_bin, extstudy_instudy_commentprob_difference) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(duringstudy_ext_quantile_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(duringstudy_ext_quantile_bin = bins)
-
-par(mfrow = c(3,1))
-this_ylim = c(-1,1)
-this_xlab = "Pre-Study Probability of Commenting At All on a Given Day"
-this_ylab = "P(comment > 0/day | int) - P(comment > 0/day | ext)"
-this_main = "Probability of Commenting At least Once per Day"
-
-boxplot(extstudy_instudy_commentprob_difference ~ duringstudy_ext_quantile_bin, data = control, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['control'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(extstudy_instudy_commentprob_difference ~ duringstudy_ext_quantile_bin, data = moderation, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['moderation'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(extstudy_instudy_commentprob_difference ~ duringstudy_ext_quantile_bin, data = incentives, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['incentives'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
-
-
-```
-
-
-### Make Raw non-diff versions
-
-
-```{r, fig.width=8, fig.height=10}
+#### Make Raw non-diff versions
+#keep
 pdf("ws_outputs/comment_raw_by_prestudy_quantile.pdf", width = 8, height = 10)
 
 s <- s %>% mutate(prestudy_quantile_bin = cut(mean_daily_comments_prestudy, breaks = quantile(mean_daily_comments_prestudy, probs = seq(0, 1, by = 0.25), na.rm = TRUE)))
@@ -1278,50 +1094,6 @@ legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(co
 dev.off()
 
 ```
-
-
-```{r, fig.width=8, fig.height=10}
-pdf("ws_outputs/commentdailyprob_raw_by_prestudy_quantile.pdf", width = 8, height = 10)
-
-s <- s %>% mutate(prestudy_quantile_bin = cut(prestudy_daily_commentprob, breaks = quantile(prestudy_daily_commentprob, probs = seq(0, 1, by = 0.25), na.rm = TRUE)))
-
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(prestudy_quantile_bin, duringstudy_int_daily_commentprob) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(prestudy_quantile_bin, duringstudy_int_daily_commentprob) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(prestudy_quantile_bin, duringstudy_int_daily_commentprob) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(prestudy_quantile_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(prestudy_quantile_bin = bins)
-
-par(mfrow = c(3,1))
-this_ylim = c(0,1)
-this_xlab = "Pre-Study Probability of Commenting At All on a Given Day"
-this_ylab = "In-Study Probability of Commenting At All on a Given Day"
-this_main = "Pre-Study vs In-Study Probability of Commenting At least Once per Day"
-
-boxplot(duringstudy_int_daily_commentprob ~ prestudy_quantile_bin, data = control, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['control'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(duringstudy_int_daily_commentprob ~ prestudy_quantile_bin, data = moderation, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['moderation'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(duringstudy_int_daily_commentprob ~ prestudy_quantile_bin, data = incentives, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['incentives'], ylim = this_ylim)
-abline(h = 0, lty = 2)
-#abline(0,-1)
-
-legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
-
-
-dev.off()
-
-```
-
 
 
 # WS: Commenting activity over time (Black Plot)
@@ -1818,18 +1590,9 @@ ps$ParticipantID %>% unique %>% length
 ```
 
 
-```{r}
-internal_comments_augmented
-
-```
-
 
 ```{r}
-# join ps to internal_comments_augmented
-# internal_comments_augmented <- internal_comments_augmented %>% 
-#   left_join(ps %>% select(ParticipantID, toxic, constructive, enjoyable, respectful, polarized, knowledgeable, inform others, entertain others, express my opinion, provoke others, express my emotions, connect with others, deceive others, gain attention, prove a point, cause chaos, bring attention to a topic, pursuade others, surprise or shock others, help researchers, no barriers, personally triggered, could not add anything, intimidated by sophistication, afraid of backlash), by = "ParticipantID")
-
-# enclose all elements of select i `...`
+#important join
 internal_comments_augmented <- left_join(internal_comments_augmented, ps %>% filter(survey_week == 4) %>% 
               select(`ParticipantID`, `toxic`, `constructive`, `enjoyable`, `respectful`, `polarized`, `knowledgeable`, `inform others`, `entertain others`, `express my opinion`, `provoke others`, `express my emotions`, `connect with others`, `deceive others`, `gain attention`, `prove a point`, `cause chaos`, `bring attention to a topic`, `pursuade others`, `surprise or shock others`, `help researchers`, `no barriers`, `personally triggered`, `could not add anything`, `intimidated by sophistication`, `afraid of backlash`),
             by = "ParticipantID")
@@ -2036,7 +1799,7 @@ plot_comments(filtered_data,
 ```
 
 
-## Agg number of posts from users with each motive, by server
+## WS Agg number of posts from users with each motive, by server
 
 ```{r}
 
@@ -2413,79 +2176,6 @@ lm_int_test %>% summary
 
 
 
-
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-# WS: Analyze Ideological Extremity, Actual Agreement with other Posters
-
-```{r}
-
-
-```
-
-```{r}
-
-
-```
-
-# Analyze Education as predictor of loquaciousness
-
-```{r}
-lm(mean_daily_comments_instudy ~ education, data = s_aug) %>% summary
-
-```
-
-
-
 # Analyze First-Mover Effect on a Daily Basis
 
 Idea: daily toxicity is a function of the toxicity of the first post(s) of the day
@@ -2709,29 +2399,6 @@ model <- glmer(n_comments ~ mean_score_lag*condition + polinterest + (1 | Partic
                na.action = na.exclude)
 summary(model)
 ```
-
-
-
-
-## WS: Investigate score and probability of dropping out of the panel
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
 
 
 
