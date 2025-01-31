@@ -1531,73 +1531,7 @@ s
 
 
 
-#WS: Investigate Post-Study Survey Measures, like Motivations
 
-```{r}
-# motives
-# barriers
-# perceptions
-# perceptions_g
-```
-
-
-```{r}
-ps <- post_surveys
-
-# discussion perception
-ps <- ps %>% 
-  mutate(`toxic` = as.factor(discussion_percep_1),
-         `constructive` = as.factor(discussion_percep_2),
-         `enjoyable` = as.factor(discussion_percep_3))
-
-#group perception
-ps <- ps %>% 
-  mutate(`respectful` = as.factor(group_percep_1),
-         `polarized` = as.factor(group_percep_2),
-         `knowledgeable` = as.factor(group_percep_3))
-
-#motives
-ps <- ps %>% 
-  mutate(`inform others` = as.factor(post_motives_20),
-         `entertain others` = as.factor(post_motives_39),
-         `express my opinion` = as.factor(post_motives_40),
-         `provoke others` = as.factor(post_motives_41),
-         `express my emotions` = as.factor(post_motives_42),
-         `connect with others` = as.factor(post_motives_43),
-         `deceive others` = as.factor(post_motives_44),
-         `gain attention` = as.factor(post_motives_45),
-         `prove a point` = as.factor(post_motives_46),
-         `cause chaos` = as.factor(post_motives_47),
-         `bring attention to a topic` = as.factor(post_motives_48),
-         `pursuade others` = as.factor(post_motives_49),
-         `surprise or shock others` = as.factor(post_motives_50),
-         `help researchers` = as.factor(post_motives_51))
-
-#barriers
-ps <- ps %>% 
-  mutate(`no barriers` = as.factor(non_participation_1),
-         `personally triggered` = as.factor(non_participation_2),
-         `could not add anything` = as.factor(non_participation_3),
-         `intimidated by sophistication` = as.factor(non_participation_4),
-         `afraid of backlash` = as.factor(non_participation_5))
-
-ps
-```
-
-```{r}
-ps$ParticipantID %>% unique %>% length
-
-```
-
-
-```{r}
-#important join
-internal_comments_augmented <- left_join(internal_comments_augmented, ps %>% filter(survey_week == 4) %>% 
-              select(`ParticipantID`, `toxic`, `constructive`, `enjoyable`, `respectful`, `polarized`, `knowledgeable`, `inform others`, `entertain others`, `express my opinion`, `provoke others`, `express my emotions`, `connect with others`, `deceive others`, `gain attention`, `prove a point`, `cause chaos`, `bring attention to a topic`, `pursuade others`, `surprise or shock others`, `help researchers`, `no barriers`, `personally triggered`, `could not add anything`, `intimidated by sophistication`, `afraid of backlash`),
-            by = "ParticipantID")
-
-internal_comments_augmented
-```
 
 
 # Comment Plot
@@ -1786,10 +1720,70 @@ plot_comments(filtered_data,
 ```
 
 
+#WS: Investigate Post-Study Survey Measures, like Motivations
+
+```{r}
+# motives
+# barriers
+# perceptions
+# perceptions_g
+```
+
+
+```{r}
+ps <- post_surveys
+
+# discussion perception
+ps <- ps %>% 
+  mutate(`toxic` = as.factor(discussion_percep_1),
+         `constructive` = as.factor(discussion_percep_2),
+         `enjoyable` = as.factor(discussion_percep_3))
+
+#group perception
+ps <- ps %>% 
+  mutate(`respectful` = as.factor(group_percep_1),
+         `polarized` = as.factor(group_percep_2),
+         `knowledgeable` = as.factor(group_percep_3))
+
+#motives
+ps <- ps %>% 
+  mutate(`inform others` = as.factor(post_motives_20),
+         `entertain others` = as.factor(post_motives_39),
+         `express my opinion` = as.factor(post_motives_40),
+         `provoke others` = as.factor(post_motives_41),
+         `express my emotions` = as.factor(post_motives_42),
+         `connect with others` = as.factor(post_motives_43),
+         `deceive others` = as.factor(post_motives_44),
+         `gain attention` = as.factor(post_motives_45),
+         `prove a point` = as.factor(post_motives_46),
+         `cause chaos` = as.factor(post_motives_47),
+         `bring attention to a topic` = as.factor(post_motives_48),
+         `pursuade others` = as.factor(post_motives_49),
+         `surprise or shock others` = as.factor(post_motives_50),
+         `help researchers` = as.factor(post_motives_51))
+
+#barriers
+ps <- ps %>% 
+  mutate(`no barriers` = as.factor(non_participation_1),
+         `personally triggered` = as.factor(non_participation_2),
+         `could not add anything` = as.factor(non_participation_3),
+         `intimidated by sophistication` = as.factor(non_participation_4),
+         `afraid of backlash` = as.factor(non_participation_5))
+
+ps
+
+#important join
+internal_comments_augmented <- left_join(internal_comments_augmented, ps %>% filter(survey_week == 4) %>%
+              select(`ParticipantID`, `toxic`, `constructive`, `enjoyable`, `respectful`, `polarized`, `knowledgeable`, `inform others`, `entertain others`, `express my opinion`, `provoke others`, `express my emotions`, `connect with others`, `deceive others`, `gain attention`, `prove a point`, `cause chaos`, `bring attention to a topic`, `pursuade others`, `surprise or shock others`, `help researchers`, `no barriers`, `personally triggered`, `could not add anything`, `intimidated by sophistication`, `afraid of backlash`),
+            by = "ParticipantID")
+
+internal_comments_augmented
+```
+
+
 ## WS Agg number of posts from users with each motive, by server
 
 ```{r}
-
 sums_express_opinion <- internal_comments_augmented %>% group_by(subreddit) %>% dplyr::summarize(sum_express_opinion = sum(!is.na(`express my opinion`)))
 sums_inform_others <- internal_comments_augmented %>% group_by(subreddit) %>% dplyr::summarize(sum_inform_others = sum(!is.na(`inform others`)))
 sums_help_researchers <- internal_comments_augmented %>% group_by(subreddit) %>% dplyr::summarize(sum_help_researchers = sum(!is.na(`help researchers`)))
