@@ -1105,29 +1105,24 @@ dev.off()
 #important data: internal_comments, s
 #created: internal_comments_augmented
 
+#goal: make it work from just sample and discussion_data
+
+#comeback
 ```
 
 
 ```{r}
-#internal_comments_augmented <- left_join(internal_comments, sample, by = "ParticipantID")
-internal_comments_augmented <- left_join(internal_comments, s, by = "ParticipantID")
+# here I make a version of internal_comments that is "augmented" with additional variables from the survey, and additional variables constructed below
+internal_comments_augmented <- discussion_data %>% mutate(source = "internal")%>%
+  filter(created_comment > as_datetime("2024-06-10") & created_comment < as_datetime("2024-07-06")) %>%
+  filter(!is.na(ParticipantID))
+internal_comments_augmented <- left_join(internal_comments_augmented %>% select(-"subreddit", -"...1"), sample, by = "ParticipantID")
+internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(condition), !is.na(ParticipantID), !is.na(subreddit))
+#internal_comments_augmented <- left_join(internal_comments, s, by = "ParticipantID")
 
 # rescale toxicity to 0,1
-
 toxicity_quantiles <- internal_comments_augmented$comment_toxicity %>% quantile(probs = seq(0, 1, by = 0.1), na.rm = TRUE)
-
 internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(comment_toxicity)) %>% mutate(comment_toxicity_rescaled = cut(comment_toxicity, breaks = toxicity_quantiles, labels = F, include.lowest = TRUE)/10)
-
-
-#find the subreddits in each condition
-internal_comments_augmented %>% group_by(subreddit, condition) %>% dplyr::summarize(n = n())
-
-control_1 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics1")
-control_6 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics6")
-moderation_2 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics2")
-moderation_5 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics5")
-incentives_3 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics3")
-incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics4")
 
 ```
 
@@ -1137,22 +1132,11 @@ incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPoli
 
 length_comment_char_quantiles <- internal_comments_augmented$length_comment_char %>% quantile(probs = seq(0, 1, by = 0.1), na.rm = TRUE)
 
-# add
+# add rescaled length of comment
 internal_comments_augmented <- internal_comments_augmented %>% filter(!is.na(length_comment_char)) %>% mutate(length_comment_char_rescaled = cut(length_comment_char, breaks = length_comment_char_quantiles, labels = F, include.lowest = TRUE)/10)
 
+# add first and last comment datetimes
 internal_comments_augmented <- left_join(internal_comments_augmented, (internal_comments_augmented %>% group_by(ParticipantID) %>% dplyr::summarize(first_comment_posted = min(created_comment), last_comment_posted = max(created_comment))))
-
-#find the subreddits in each condition
-#internal_comments_augmented %>% group_by(subreddit, condition) %>% dplyr::summarize(n = n())
-
-control_1 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics1")
-control_6 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics6")
-moderation_2 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics2")
-moderation_5 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics5")
-incentives_3 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics3")
-incentives_4 <- internal_comments_augmented %>% filter(subreddit == "DiscussPolitics4")
-
-control_1
 ```
 
 
@@ -1283,7 +1267,7 @@ color2 = "red"
 # filtered_data <- internal_comments_augmented %>% filter(!is.na(respectful))
 # participant_order <- filtered_data %>% arrange(respectful, last_comment_posted) %>% pull(ParticipantID) %>% unique()
 
-filtered_data <- internal_comments_augmented
+filtered_data <- internal_comments_augmented %>% filter(!is.na(comment_toxicity))
 participant_order <- filtered_data %>% arrange(last_comment_posted) %>% pull(ParticipantID) %>% unique()
 
 control_1 <- filtered_data %>% filter(subreddit == "DiscussPolitics1")
@@ -1325,6 +1309,78 @@ add_gradient_legend(
 )
 
 ```
+
+
+
+```{r}
+data = control_6
+names_for_participant_heights = participant_order
+color_column = this_color_column
+main = "Control B"
+bg = bgcol
+fg = fgcol
+pch = pch
+color1 = color1
+color2 = color2
+xlim = this_xlim
+point_size = this_point_size
+
+
+# Filter data to remove NA toxicity values
+data <- data
+names_for_participant_heights <- names_for_participant_heights[which(names_for_participant_heights %in% data$ParticipantID)]
+participant_heights <- 1:length(names_for_participant_heights)
+names(participant_heights) <- names_for_participant_heights
+par(bg = bg)
+par(bg = bg, col.axis = fg, col.lab = fg, col.main = fg, col.sub = fg)
+
+if(is.null(xlim)){
+  xlim <- c(min(data$created_comment), max(data$created_comment))
+}
+
+color_column_sym <- sym(color_column)
+
+# Initialize the plot
+plot(data$created_comment[1], participant_heights[which(names(participant_heights) == data$ParticipantID[1])], 
+     type = "p", pch = pch, col = rgb(0, 0, 0, 0), 
+     xlab = "Date", ylab = "ParticipantID", 
+     ylim = c(0, length(participant_heights)), 
+     xlim = xlim, 
+     main = main, 
+     yaxt = "n")
+
+# Add vertical lines at midnight Pacific time
+date_range <- c(lubridate::floor_date(min(data$created_comment), unit = "day"), 
+                lubridate::ceiling_date(max(data$created_comment), unit = "day"))
+date_range <- seq(date_range[1], date_range[2], by = "day")
+date_range_pacific <- with_tz(date_range, tzone = "America/Los_Angeles")
+for(i in date_range_pacific){
+  abline(v = i, col = rgb(1, 1, 1, .2), lty = 1)
+}
+
+# Plot posts in rows with adjustable point size
+for(i in 1:nrow(data)){
+  points(data$created_comment[i], 
+         participant_heights[which(names(participant_heights) == data$ParticipantID[i])], 
+         type = "p", pch = pch, 
+         col = color_interpolate(color1, color2, data[[color_column_sym]][i]), 
+         cex = point_size) # Adjust point size here
+}
+
+# Annotate each row with the ParticipantID in small text right-aligned to the y-axis
+par(xpd = TRUE)
+for(i in participant_heights){
+  text(x = xlim[1], y = i, labels = names(participant_heights)[i], pos = 2, cex = 0.5, col = fg)
+}
+par(xpd = FALSE)
+
+axis(1, col = fg, col.axis = NA, col.ticks = NA) # X-axis
+
+data[i,]
+```
+
+
+
 
 
 ```{r, fig.height=12, fig.width=12}
