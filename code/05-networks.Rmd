@@ -355,7 +355,10 @@ survival_data <- discussion_data %>%
 # h(t) hazard's function: risk of dying at time t, given the covariates. Covariates > 0 increase in hazard, # covariates < 0 decrease in hazard / negative predictor for dropout.    
 res.cox <- coxph(Surv(time,status) ~ condition + group_toxicity, data = survival_data) 
 summary(res.cox)
+```
 
+
+```{r}
 #Kaplan-Meier survival curves for different groups
 surv_fit <- survfit(Surv(time, status) ~ condition, data = survival_data)
 
@@ -369,8 +372,10 @@ ggsurvplot(surv_fit,
   xlab = "Days",  
   xlim = c(0, 30) ,
   ylab = "Probability for Continued Participation")
+```
 
 
+```{r}
 # split along toxicity
 toxicity_threshold <- quantile(survival_data$group_toxicity, 0.8, na.rm = TRUE)
 
