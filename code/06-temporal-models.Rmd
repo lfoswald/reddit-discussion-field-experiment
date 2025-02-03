@@ -89,6 +89,8 @@ se_est <- summary(model)$coefficients["mean_score_lag", "Std. Error"]
 lower_ci <- coef_est - 1.96 * se_est
 upper_ci <- coef_est + 1.96 * se_est
 
+coef_df <- data.frame(term = "Mean Score (Lagged)",estimate = coef_est, lower = lower_ci, upper = upper_ci)
+
 coef_label <- paste0(" = ", round(coef_est, 2),
                      " [", round(lower_ci, 2), ", ", round(upper_ci, 2), "]")
 
@@ -96,19 +98,44 @@ coef_label <- paste0(" = ", round(coef_est, 2),
 predictions <- ggpredict(model, terms = c("mean_score_lag [all]", "polinterest [mean]"),
                          bias_correction = TRUE)
 
+# predicted plot
 feedback_plot <- ggplot(predictions, aes(x = x, y = predicted)) +
-  geom_line(color = "black", size = 1) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "black") +
-  annotate("text",x = 0, y = 4, size = 4, hjust = 0,
-           label = bquote(beta == .(round(coef_est, 2)) ~ "[" ~ .(round(lower_ci, 2)) ~ "," ~ .(round(upper_ci, 2)) ~ "]")) +
+  geom_line(color = "black", size = 0.8) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "#6699FF") +
+  #annotate("text",x = 0, y = 4, size = 4, hjust = 0,
+  #         label = bquote(beta == .(round(coef_est, 2)) ~ "[" ~ .(round(lower_ci, 2)) ~ "," ~ .(round(upper_ci, 2)) ~ "]")) +
   labs(x = "Mean score received on previous comments (lagged)",
        y = "Predicted Number of Comments",
-       title = "Social Feedback") +
-  theme_bw()
+       title = "") +
+  theme_bw()+
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
 
 feedback_plot
 
-ggsave("../output/social_feedback.pdf", feedback_plot, width = 4, height = 2.5)
+ggsave("../output/social_feedback.pdf", feedback_plot, width = 4, height = 3)
+
+
+# coefficient plot
+coef_plot <- ggplot(coef_df, aes(x = term, y = estimate)) +
+  geom_point(size = 4, color = "black") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, color = "black") +
+  labs(x = "",
+       y = "Effect on Number of Comments \n GLMM Coefficient Estimate, 95%CI",
+       title = "Social Feedback") +
+  ylim(c(-0.1,0.2))+
+  theme_bw()+
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10, color = "black"),
+        plot.title = element_text(size = 12))
+
+coef_plot
+
+ggsave("../output/social_feedback_coef.pdf", coef_plot, width = 2, height = 4)
+
+feedback_combi <- grid.arrange(coef_plot,feedback_plot, nrow = 1, widths = c(2,4))
+ggsave("../output/social_feedback_combi.pdf", feedback_combi, width = 6, height = 3)
 
 ```
 
@@ -131,6 +158,45 @@ survival_data <- discussion_data %>%
 res.cox <- coxph(Surv(time,status) ~ condition + group_toxicity, data = survival_data) 
 summary(res.cox)
 ```
+## Cox coefficient plot
+```{r}
+cox_summary <- summary(res.cox)$coefficients
+
+coef_df <- data.frame(term = rownames(cox_summary),
+  estimate = cox_summary[, "coef"],
+  se = cox_summary[, "se(coef)"]) %>%
+  mutate(lower = estimate - 1.96 * se,
+         upper = estimate + 1.96 * se)
+
+coef_df <- coef_df %>% 
+  filter(term %in% c("conditionincentives", "conditionmoderation", "group_toxicity"))
+
+cox_coef_plot <- ggplot(coef_df, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  labs(x = "Cox Prop. Hazards Model Coefficient, 95%CIs", 
+       title = "Discussion Drop-out", y = "",
+       subtitle = "Survival analysis for participation") +
+  scale_y_discrete(labels = c("conditionincentives" = "Incentives",
+                              "conditionmoderation" = "Moderation",
+                              "group_toxicity" = "Group \n Toxicity")) +
+  scale_color_manual(values = c(
+    "conditionincentives" = "#29c195",
+    "conditionmoderation" = "#6699FF",
+    "group_toxicity" = "black"
+  )) +
+  theme_bw()+
+  coord_flip()+
+  guides(color = "none")
+
+cox_coef_plot
+ggsave("../output/cox_coef_plot.pdf", cox_coef_plot, width = 3, height = 4.5)
+
+
+
+```
+
 
 ## Kaplan-Meier survival curves for visualization
 ```{r}
@@ -148,7 +214,7 @@ surv_group_plot <- ggsurvplot(surv_fit,
   #risk.table = TRUE,
   #              tables.height = 0.2,
   #              tables.theme = theme_cleantable(),
-  legend.title = "Experimental Condition", 
+  legend.title = "Condition", 
   legend.labs = c("Control", "Incentives", "Moderation"), 
   xlab = "Days of Discussion Phase",  
   xlim = c(1, 28) ,
@@ -156,7 +222,7 @@ surv_group_plot <- ggsurvplot(surv_fit,
 
 surv_group_plot
 
-ggexport(plotlist =list(surv_group_plot),filename = "../output/group_survival.pdf", width = 5, height = 4)
+ggexport(plotlist =list(surv_group_plot),filename = "../output/group_survival.pdf", width = 4, height = 4)
 ```
 
 
@@ -175,17 +241,17 @@ surv_tox_plot <- ggsurvplot(surv_fit,
   surv.median.line = "hv",
   pval = TRUE,
   pval.size = 3,
-  palette = c("darkred","#6699FF"), 
+  palette = c("black","grey"), 
   conf.int = TRUE,   
-  legend.title = "Toxicity Group", # Customize legend title
-  legend.labs = c("High Group Toxicity", "Low Group Toxicity"), 
+  legend.title = "Group Toxicity", # Customize legend title
+  legend.labs = c("High", "Low"), 
   xlab = "Days of Discussion Phase",  
   xlim = c(1, 28) ,
   ylab = "Probability for Continued Participation")
 
 surv_tox_plot
 
-ggexport(plotlist = list(surv_tox_plot), filename = "../output/tox_survival.pdf", width = 5, height = 4)
+ggexport(plotlist = list(surv_tox_plot), filename = "../output/tox_survival.pdf", width = 4, height = 4)
 ```
 
 

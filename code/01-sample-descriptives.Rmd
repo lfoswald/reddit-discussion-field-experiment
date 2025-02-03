@@ -88,18 +88,18 @@ any_check <- post_surveys%>%
   pull(ParticipantID)
 
 sample%>% mutate(active = ifelse(is.na(comment_count),"no","yes"),
-         active = ifelse(!ParticipantID %in% any_check & active == "no", "inactive", active))%>%count(active)
+         active = ifelse(!ParticipantID %in% any_check & active == "no", "join only", active))%>%count(active)
 
 bars <- sample%>%
   mutate(active = ifelse(is.na(comment_count),"no","yes"),
-         active = ifelse(!ParticipantID %in% any_check & active == "no", "inactive", active))%>%
+         active = ifelse(!ParticipantID %in% any_check & active == "no", "join only", active))%>%
   ggplot()+
   geom_bar(aes(factor(active)), fill = c("darkgrey","lightgrey","#6699FF"))+
   xlab("Wrote any comment")+
   ylab("")+
-  annotate(geom = "text", x = "inactive",   y = 87, label = "97")+
-  annotate(geom = "text", x = "no",   y = 82, label = "92")+
-  annotate(geom = "text", x = "yes",   y = 321, label = "331")+
+  annotate(geom = "text", x = "join only",   y = 85, label = "97")+
+  annotate(geom = "text", x = "no",   y = 80, label = "92")+
+  annotate(geom = "text", x = "yes",   y = 319, label = "331")+
   theme_bw()
   
 histog <- ggplot(sample)+
@@ -483,7 +483,6 @@ colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolo
 ```
 
 ```{r}
-
 comment_data_ranges <- daily_summary_act %>% group_by(ParticipantID) %>% dplyr::summarize(earliest_comment = min(created_comment), latest_comment = max(created_comment))
 
 #plot hist of earliest and latest comment dates
@@ -563,17 +562,11 @@ mean_daily_comments <- left_join(mean_daily_comments, mean_prestudy_commentprob,
 # join mean_daily_comments to sample
 s <- left_join(sample, mean_daily_comments, by = "ParticipantID")
 
-s
-```
-
-
-
-```{r}
 #come back and use S for this
 daily_summary_act %>% pull(created_comment) %>% hist(breaks = "day") 
 
 # bar chart of comment count by day, stacked by source=="internal" vs source=="external"
-barplot(table(daily_summary_act$source, daily_summary_act$created_comment), beside = T, col = c("grey50", "blue"), legend = T, border = NA)
+barplot(table(daily_summary_act$source, daily_summary_act$created_comment), beside = T, col = c("grey50", "#6699FF"), legend = T, border = NA)
 
 ```
 
