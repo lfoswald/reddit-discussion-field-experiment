@@ -1,0 +1,92 @@
+---
+title: "Temporal Model"
+subtitle: "Reddit Communities Field Experiment"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, out.width = "100%", out.height = "30%", message=F, warning=F)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(lme4)
+```
+
+Load anonymous data (no comment texts, open comments, usernames or email addresses)
+```{r , results='hide'}
+# reddit data
+discussion_data <- read_csv("../data/anon/discussions_anon.csv")
+sample <- read_csv("../data/anon/sample_anon.csv")
+```
+
+
+
+# Construct lagged dataframe
+
+```{r}
+#arrange by day
+daily_discussion_data <- discussion_data %>% arrange(created_comment) %>% mutate(day = as.Date(created_comment)) %>% group_by(ParticipantID, day) %>% dplyr::summarize(n_comments = n(), mean_score = mean(score_comment), mean_toxicity = mean(comment_toxicity, na.rm=T), sum_score = sum(score_comment, na.rm=T))
+#daily_discussion_data
+```
+
+
+```{r}
+# Pad out the daily_discussion_data dataframe to have a row for each ParticipantID-day combination
+daily_discussion_data_complete <- daily_discussion_data %>% ungroup %>% complete(ParticipantID, day)
+daily_discussion_data_complete$n_comments[which(is.na(daily_discussion_data_complete$n_comments))] <- 0
+```
+
+
+```{r}
+# Construct lagged data structure
+# Note: This loop is inefficient, but has the virtue of making explicit exactly how the lagged mean score is calculated
+
+lagged_data <- daily_discussion_data_complete
+pb <- txtProgressBar(min = 0, max = nrow(lagged_data), style = 3)
+for (i in 1:nrow(lagged_data)) {
+  setTxtProgressBar(pb, i)
+  if (lagged_data$day[i] <= (lagged_data %>% filter(ParticipantID == lagged_data$ParticipantID[i]) %>% filter(n_comments!=0) %>% pull(day) %>% min)){
+    lagged_data$mean_score_lag[i] <- NA
+  } else {
+    lags <- lagged_data %>% filter(ParticipantID == lagged_data$ParticipantID[i] & day < lagged_data$day[i]) %>% dplyr::summarize(mean_score = mean(mean_score, na.rm = T), sum_score = sum(sum_score, na.rm = T))
+    lagged_data$mean_score_lag[i] <- lags %>% pull(mean_score)
+  }
+}
+
+lagged_data %>% select(-mean_score)
+
+#augment with survey data
+lagged_data <- left_join(lagged_data, sample, by = "ParticipantID") %>% mutate(condition = as.factor(condition))
+
+#data %>% select(-mean_score) %>% tail
+```
+
+
+# Estimate Models
+
+```{r}
+#basic model
+model <- glmer(n_comments ~ mean_score_lag + (1 | ParticipantID), 
+               data = lagged_data, 
+               family = poisson(link = "log"),
+               na.action = na.exclude)
+
+summary(model)
+```
+
+
+```{r}
+# More elaborate model
+# *seems* correctly specified, but I'm not well-trained in temporal models...
+model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit), 
+               data = lagged_data, 
+               family = poisson(link = "log"),
+               na.action = na.exclude)
+summary(model)
+
+```
+
+
