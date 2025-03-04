@@ -115,7 +115,6 @@ write_csv(scaled_sample, file = "../data/anon/scaled_sample.csv")
 # Participation Prediction
 
 ## Zero Hurdle Models for Count data
-https://en.wikipedia.org/wiki/Hurdle_model
 https://search.r-project.org/CRAN/refmans/pscl/html/hurdle.html
 
 ```{r}
@@ -177,7 +176,7 @@ for (i in seq_along(models)) {
     filter(row.names(.) != "(Intercept)") %>%
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df <- do.call(rbind, model_frames)
@@ -201,7 +200,10 @@ comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor
   ggtitle("Prediction of user level discussion participation") +
   xlab("") +
   ylab("Zero hurdle models for count data regression") +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x")  
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 ggsave("../output/comment_plot_pred_hurdle_with_external.pdf", comment_plot_pred_active_hurdle_ext, width = 6, height = 4)
 
@@ -259,7 +261,7 @@ for (i in seq_along(models)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df <- do.call(rbind, model_frames)
@@ -281,7 +283,10 @@ comment_plot_pred_active_hurdle_geometric <- ggplot(combined_df, aes(x = rev(Pre
   ggtitle("Prediction of user level discussion participation") +
   xlab("") +
   ylab("Zero hurdle models for count data regression (geometric, binomial)") +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x")  
+  facet_wrap(~ Model, ncol = 2, scales = "free_x")  +
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 ggsave("../output/comment_plot_pred_hurdle_geometric.pdf", comment_plot_pred_active_hurdle_geometric, width = 6, height = 4)
 
@@ -331,7 +336,7 @@ for (i in seq_along(models)) {
     filter(row.names(.) != "(Intercept)") %>% 
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df <- do.call(rbind, model_frames)
@@ -355,7 +360,10 @@ comment_plot_pred_active_hurdle_negbin <- ggplot(combined_df, aes(x = rev(Predic
   ggtitle("Prediction of user level discussion participation") +
   xlab("") +
   ylab("Zero hurdle models for count data regression (negbin, binomial)") +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x")  
+  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 # Save the plot with "negbin" in the file name
 ggsave("../output/comment_plot_pred_hurdle_negbin.pdf", comment_plot_pred_active_hurdle_negbin, width = 6, height = 4)
@@ -416,7 +424,10 @@ comment_plot_pred_binary <- ggplot(combined_df, aes(x = rev(Predictor), alpha = 
   coord_flip()+
   ggtitle("Comment activity binary", subtitle = "Excluding inactive users")+
   xlab("")+
-  ylab("Change in log odds")
+  ylab("Change in log odds")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 comment_plot_pred_binary
 
@@ -476,8 +487,10 @@ comment_plot_pred_active <- ggplot(combined_df, aes(x = rev(Predictor), alpha = 
   coord_flip() +
   ggtitle("Comment activity", subtitle = "Poisson prediction of comment count") +
   xlab("") +
-  ylab("Change in log number of comments")
-
+  ylab("Change in log number of comments")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 comment_plot_pred_active
 
 ggsave("../output/comment_plot_pred_poisson.pdf", comment_plot_pred_active, width = 4, height = 4)
@@ -543,7 +556,10 @@ comment_plot_pred_active_ex0 <- ggplot(combined_df, aes(x = rev(Predictor), alph
   coord_flip()+
   ggtitle("Comment activity", subtitle = "Linear prediction of comment count")+
   xlab("")+
-  ylab("Scaled beta coefficients, HC2 robust SE")
+  ylab("Scaled beta coefficients, HC2 robust SE")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 comment_plot_pred_active_ex0
 
@@ -600,7 +616,7 @@ for (i in seq_along(models_control)) {
     filter(row.names(.) != "(Intercept)") %>% 
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_control[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_control[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_control <- bind_rows(model_frames_control) %>%
@@ -613,15 +629,17 @@ combined_df_control <- bind_rows(model_frames_control) %>%
 comment_plot_pred_c <- ggplot(combined_df_control, aes(x = rev(Predictor), alpha = AlphaValue)) +
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
-                      ymax = Coefficient + SE * interval2), colour = "#70facb", lwd = 1) +
+                      ymax = Coefficient + SE * interval2), colour = "grey", lwd = 1) +
   guides(alpha = "none") +
   theme_bw(base_size = 10) +
   coord_flip() +
   facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Control condition", subtitle = "Prediction of user level discussion participation") +
   xlab("") +
-  ylab("Zero hurdle models for count data regression")
-
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 # filtered data for moderation condition
 scaled_sample_m <- present_sample %>% filter(condition == "moderation")
@@ -668,7 +686,7 @@ for (i in seq_along(models_moderation)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_moderation[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_moderation[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_moderation <- bind_rows(model_frames_moderation) %>%
@@ -688,7 +706,10 @@ comment_plot_pred_m <- ggplot(combined_df_moderation, aes(x = rev(Predictor), al
   facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Moderation condition", subtitle = "Prediction of user level discussion participation") +
   xlab("") +
-  ylab("Zero hurdle models for count data regression")
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 
 # filtered data for incentives condition
@@ -736,7 +757,7 @@ for (i in seq_along(models_incentives)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_incentives[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_incentives[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_incentives <- bind_rows(model_frames_incentives) %>%
@@ -756,7 +777,10 @@ comment_plot_pred_i <- ggplot(combined_df_incentives, aes(x = rev(Predictor), al
   facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Incentives condition", subtitle = "Prediction of user level discussion participation") +
   xlab("") +
-  ylab("Zero hurdle models for count data regression")
+  ylab("Zero hurdle models for count data regression")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
 
 combi_conditions <- grid.arrange(comment_plot_pred_c, comment_plot_pred_m, comment_plot_pred_i, nrow = 3)
 
@@ -799,7 +823,7 @@ for (i in seq_along(models_control)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_control[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_control[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_control <- bind_rows(model_frames_control) %>%
@@ -812,14 +836,17 @@ combined_df_control <- bind_rows(model_frames_control) %>%
 comment_plot_pred_c <- ggplot(combined_df_control, aes(x = rev(Predictor), alpha = AlphaValue)) +
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
-                      ymax = Coefficient + SE * interval2), colour = "#70facb", lwd = 1) +
+                      ymax = Coefficient + SE * interval2), colour = "grey", lwd = 1) +
   guides(alpha = "none") +
   theme_bw(base_size = 10) +
   coord_flip() +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Control condition", subtitle = "Prediction of discussion participation") +
   xlab("") +
-  ylab("")
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
 
 # filtered data for moderation condition
 scaled_sample_m <- present_sample %>% filter(condition == "moderation")
@@ -850,7 +877,7 @@ for (i in seq_along(models_moderation)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_moderation[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_moderation[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_moderation <- bind_rows(model_frames_moderation) %>%
@@ -867,12 +894,15 @@ comment_plot_pred_m <- ggplot(combined_df_moderation, aes(x = rev(Predictor))) +
   guides(alpha = "none") +
   theme_bw(base_size = 10) +
   coord_flip() +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Moderation condition", subtitle = "Prediction of discussion participation") +
   xlab("") +
-  ylab("")
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
 
-# filtered data for incentives condition
+
 scaled_sample_i <- present_sample %>% filter(condition == "incentives")
 
 models_incentives <- list(
@@ -901,7 +931,7 @@ for (i in seq_along(models_incentives)) {
     filter(row.names(.) != "(Intercept)") %>%   
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
-  model_frames_incentives[[i]] <- rbind(count_model_coef, zero_hurdle_coef)
+  model_frames_incentives[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
 combined_df_incentives <- bind_rows(model_frames_incentives) %>%
@@ -918,10 +948,13 @@ comment_plot_pred_i <- ggplot(combined_df_incentives, aes(x = rev(Predictor))) +
   guides(alpha = "none") +
   theme_bw(base_size = 10) +
   coord_flip() +
-  facet_wrap(~ Model, ncol = 2, scales = "free_x") +
   ggtitle("Incentives condition",subtitle = "Prediction of discussion participation") +
   xlab("") +
-  ylab("")
+  ylab("")+
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank()) 
 
 combi_conditions <- grid.arrange(comment_plot_pred_m, comment_plot_pred_i, nrow = 1)
 
@@ -960,368 +993,7 @@ knitr::kable(latex_table[, -grep("test", colnames(latex_table))],
                       format = "html", booktabs = TRUE)
 
 ```
-
-
-
-# WS: Compare inactive to "active"-but-never-commented
-
-```{r}
-#toplot <- present_sample %>% mutate(ever_comment = comment_count>0) %>% group_by(gender_male, ever_comment) %>% count
-
-test <- scaled_sample %>% filter(active == 0) %>% mutate(inactive = (active2=="inactive"))
-
-test$trust_general_4_w1
-
-#logistic regression to identify predictors of inactivity
-logit_model <- glm(inactive ~ gender_male + age + polinterest_w1 + comments_online_w1 + education + trust_general_4_w1, data = test, family = binomial(link = "logit"))
-
-logit_model %>% summary
-
 ```
 
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-# WS: Investigating Affpol & Ideological Extremity
-
-```{r}
-full_data$affective_polarization_w1
-full_data$leftright_w1
-full_data$polinterest_w1
-full_data$affective_pol_1_w1
-full_data$affective_pol_2_w1
-
-full_data
-```
-
-
-```{r}
-#plot(full_data$polinterest_w1, scaled_sample$affective_polarization_w1)
-
-plot(full_data$leftright_w1, scaled_sample$affective_polarization_w1)
-
-```
-
-## How is affpol coded?
-
-```{r}
-plot(full_data$leftright_w1, full_data$affective_pol_1_w1) #affective_pol_1_w1 is warmth towards dems
-plot(full_data$leftright_w1, full_data$affective_pol_2_w1) #affective_pol_2_w1 is warmth towards reps
-```
-
-
-```{r}
-plot(full_data$affective_polarization_w1, (full_data$affective_pol_1_w1-full_data$affective_pol_2_w1))
-
-#so affective_polarization_w1 is ingroup favoritism
-```
-
-
-```{r}
-plot(scaled_sample$affective_polarization_w1, scaled_sample$comment_count)
-plot(scaled_sample$polinterest_w1, scaled_sample$comment_count)
-
-```
-
-# WS: PCA Issue Ideo Analysis
-
-```{r}
-ideo_pca <- psych::pca(pre_survey %>% select(starts_with("issue_attitudes_")), nfactors = 1)
-ideo_pca
-
-#extract scores and join them to pre_survey
-pre_survey <- cbind(pre_survey, ideo_pca$scores)
-
-```
-
-
-```{r}
-scaled_sample <- left_join(scaled_sample, pre_survey %>% select(ParticipantID, RC1, RC2), by = "ParticipantID")
-
-plot(scaled_sample$RC1, scaled_sample$comment_count)
-
-lm(comment_count ~ abs(RC1), data = scaled_sample) %>% summary
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
 
 

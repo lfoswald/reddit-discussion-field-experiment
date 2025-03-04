@@ -107,9 +107,10 @@ plot_comments <- function(data, names_for_participant_heights, color_column, mai
   # Initialize the plot
   plot(data$created_comment[1], participant_heights[which(names(participant_heights) == data$ParticipantID[1])], 
        type = "p", pch = pch, col = rgb(0, 0, 0, 0), 
-       xlab = "Date", ylab = "ParticipantID", 
+       xlab = "Date",
        ylim = c(0, length(participant_heights)), 
        xlim = xlim, 
+       ylab = "Participants",
        main = main, 
        yaxt = "n")
   
@@ -131,12 +132,6 @@ plot_comments <- function(data, names_for_participant_heights, color_column, mai
            cex = point_size) # Adjust point size here
   }
   
-  # Annotate each row with the ParticipantID in small text right-aligned to the y-axis
-  par(xpd = TRUE)
-  for(i in participant_heights){
-    text(x = xlim[1], y = i, labels = names(participant_heights)[i], pos = 2, cex = 0.5, col = fg)
-  }
-  par(xpd = FALSE)
   
   axis(1, col = fg, col.axis = NA, col.ticks = NA) # X-axis
 }
@@ -235,6 +230,27 @@ add_gradient_legend(
 
 ```
 
+### Plot data over all subreddits
+```{r}
+pdf("../output/ws_outputs/plot_comments_toxicity_all.pdf", width = 6, height = 6)
+
+plot_comments(filtered_data,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "All Subreddits | Comment Toxicity", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+axis(side = 2, labels = FALSE, tick = FALSE,col.axis = "white", col.ticks = "white")
+add_gradient_legend(
+  color1 = "#6699FF", 
+  color2 = "darkred", 
+  x = mean(filtered_data$created_comment), 
+  y = 0,
+  width = diff(range(filtered_data$created_comment)) / 5, 
+  height = 1
+)
+
+dev.off()
+```
+
 
 ## Color by Score
 
@@ -294,6 +310,27 @@ add_gradient_legend(labels = c("Low", "High"),
   height = 1
 )
 
+```
+
+
+### Plot data over all subreddits
+```{r}
+pdf("../output/ws_outputs/plot_comments_scores_all.pdf", width = 6, height = 6)
+
+plot_comments(filtered_data,
+              names_for_participant_heights = participant_order,
+              color_column = this_color_column, main = "All Subreddits | Comment Scores", bg = bgcol, fg = fgcol, pch = pch, color1 = color1, color2 = color2, xlim = this_xlim, point_size = this_point_size)
+
+add_gradient_legend(labels = c("Low", "High"),
+  color1 = "#6699FF", 
+  color2 = "goldenrod", 
+  x = mean(filtered_data$created_comment), 
+  y = 0,
+  width = diff(range(filtered_data$created_comment)) / 5, 
+  height = 1
+)
+
+dev.off()
 ```
 
 

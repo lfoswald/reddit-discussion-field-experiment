@@ -35,10 +35,19 @@ scaled_sample <- read_csv("../data/anon/scaled_sample.csv")
 ### Construct lagged dataframe
 ```{r, results='hide'}
 #arrange by day
-daily_discussion_data <- discussion_data %>% arrange(created_comment) %>% mutate(day = as.Date(created_comment)) %>% group_by(ParticipantID, day) %>% dplyr::summarize(n_comments = n(), mean_score = mean(score_comment), mean_toxicity = mean(comment_toxicity, na.rm=T), sum_score = sum(score_comment, na.rm=T))
+daily_discussion_data <- discussion_data %>% 
+  arrange(created_comment) %>% 
+  mutate(day = as.Date(created_comment)) %>% 
+  group_by(ParticipantID, day) %>% 
+  dplyr::summarize(n_comments = n(), 
+                   mean_score = mean(score_comment), 
+                   mean_toxicity = mean(comment_toxicity, na.rm=T), 
+                   sum_score = sum(score_comment, na.rm=T))
 
 # Pad out the daily_discussion_data dataframe to have a row for each ParticipantID-day combination
-daily_discussion_data_complete <- daily_discussion_data %>% ungroup %>% complete(ParticipantID, day)
+daily_discussion_data_complete <- daily_discussion_data %>% 
+  ungroup %>% 
+  complete(ParticipantID, day)
 daily_discussion_data_complete$n_comments[which(is.na(daily_discussion_data_complete$n_comments))] <- 0
 
 # Construct lagged data structure
@@ -60,84 +69,106 @@ for (i in 1:nrow(lagged_data)) {
 lagged_data <- left_join(lagged_data, sample, by = "ParticipantID") %>% 
   mutate(condition = as.factor(condition))
 
-```
+# using next_day_comments / comment_again
+lagged_data <- lagged_data %>%
+  group_by(ParticipantID) %>%
+  arrange(day) %>%
+  mutate(next_day_comments = lead(n_comments),
+         comment_again = ifelse(next_day_comments > 0, 1, 0))
 
-### Estimate Social Feedback Models
-```{r}
-#basic model
-model <- glmer(n_comments ~ mean_score_lag + (1 | ParticipantID), 
+model_mean <- glmer(next_day_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit),
                data = lagged_data, 
                family = poisson(link = "log"),
                na.action = na.exclude)
+summary(model_mean)
 
-summary(model)
-```
-
-```{r}
-# More elaborate model
-model <- glmer(n_comments ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit), 
+model_prop_mean <- glmer(comment_again ~ mean_score_lag + polinterest + (1 | ParticipantID) + (1 | subreddit),
                data = lagged_data, 
-               family = poisson(link = "log"),
+               family = binomial(link = "logit"),
                na.action = na.exclude)
-summary(model)
+summary(model_prop_mean)
 
-```
-### Visualization of social feedback effect
-```{r}
-coef_est <- fixef(model)["mean_score_lag"]
-se_est <- summary(model)$coefficients["mean_score_lag", "Std. Error"]
-lower_ci <- coef_est - 1.96 * se_est
-upper_ci <- coef_est + 1.96 * se_est
+# For model_mean (Poisson GLMM)
+coef_est_mean <- fixef(model_mean)["mean_score_lag"]
+se_est_mean <- summary(model_mean)$coefficients["mean_score_lag", "Std. Error"]
+lower_ci_mean <- coef_est_mean - 1.96 * se_est_mean
+upper_ci_mean <- coef_est_mean + 1.96 * se_est_mean
 
-coef_df <- data.frame(term = "Mean Score (Lagged)",estimate = coef_est, lower = lower_ci, upper = upper_ci)
+coef_df_mean <- data.frame(term = "Mean Score (Lagged)",
+                           estimate = coef_est_mean,
+                           lower = lower_ci_mean,
+                           upper = upper_ci_mean)
 
-coef_label <- paste0(" = ", round(coef_est, 2),
-                     " [", round(lower_ci, 2), ", ", round(upper_ci, 2), "]")
+coef_plot_mean <- ggplot(coef_df_mean, aes(x = term, y = estimate)) +
+  geom_point(size = 4, color = "black") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 1,color = "black") +
+  labs(x = "",
+       y = "Next-Day Number of Comments",
+       title = "Social Feedback") +
+  ylim(-0.05,0.22)+
+  theme_bw(base_size = 13) +
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.x  = element_text(size = 10),
+        plot.title   = element_text(size = 12),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
-# predicted values across the range of mean_score_lag
-predictions <- ggpredict(model, terms = c("mean_score_lag [all]", "polinterest [mean]"),
-                         bias_correction = TRUE)
+# For model_prop_mean (Binomial GLMM)
+coef_est_prop <- fixef(model_prop_mean)["mean_score_lag"]
+se_est_prop <- summary(model_prop_mean)$coefficients["mean_score_lag", "Std. Error"]
+lower_ci_prop <- coef_est_prop - 1.96 * se_est_prop
+upper_ci_prop <- coef_est_prop + 1.96 * se_est_prop
 
-# predicted plot
-feedback_plot <- ggplot(predictions, aes(x = x, y = predicted)) +
-  geom_line(color = "black", size = 0.8) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "#6699FF") +
-  #annotate("text",x = 0, y = 4, size = 4, hjust = 0,
-  #         label = bquote(beta == .(round(coef_est, 2)) ~ "[" ~ .(round(lower_ci, 2)) ~ "," ~ .(round(upper_ci, 2)) ~ "]")) +
-  labs(x = "Mean score received on previous comments (lagged)",
-       y = "Predicted Number of Comments",
+coef_df_prop <- data.frame(term = "Mean Score (Lagged)",
+                           estimate = coef_est_prop,
+                           lower = lower_ci_prop,
+                           upper = upper_ci_prop)
+
+coef_plot_prop <- ggplot(coef_df_prop, aes(x = term, y = estimate)) +
+  geom_point(size = 4, color = "black") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 1, color = "black") +
+  labs(x = "",
+       y = "Propensity to Comment Again",
        title = "") +
-  theme_bw()+
+  theme_bw(base_size = 13) +
+  ylim(-0.05,0.22)+
+  theme(axis.title.y = element_text(size = 10),
+        axis.text.x  = element_text(size = 10),
+        plot.title   = element_text(size = 12),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+combi_plot <- grid.arrange(coef_plot_mean, coef_plot_prop, ncol = 2)
+
+ggsave("../output/social_feedback_coef_plot.pdf",combi_plot, width = 4, height = 3)
+
+
+# plotting raw data
+feedback_plot <- ggplot() +
+  geom_vline(xintercept = 1, linetype = "dashed")+
+  geom_point(data = lagged_data, 
+             aes(x = mean_score_lag, y = next_day_comments),
+             color = "#6699FF", alpha = 0.4, size = 1.5) +
+  labs(x = "Mean core received on previous comments (lagged)",
+       y = "Next-day number of comments",
+       title = "") +
+  annotate("text", x = 10, y = 22, label = "Start value of score (no votes) = 1")+
+  theme_bw() +
+  ylim(c(0,22)) +
   theme(axis.title.x = element_text(size = 10),
-        axis.title.y = element_text(size = 10))
+        axis.title.y = element_text(size = 10),
+        axis.text = element_text(size = 13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 feedback_plot
 
-ggsave("../output/social_feedback.pdf", feedback_plot, width = 4, height = 3)
-
-
-# coefficient plot
-coef_plot <- ggplot(coef_df, aes(x = term, y = estimate)) +
-  geom_point(size = 4, color = "black") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, color = "black") +
-  labs(x = "",
-       y = "Effect on Number of Comments \n GLMM Coefficient Estimate, 95%CI",
-       title = "Social Feedback") +
-  ylim(c(-0.1,0.2))+
-  theme_bw()+
-  theme(axis.title.y = element_text(size = 10),
-        axis.text.x = element_text(size = 10, color = "black"),
-        plot.title = element_text(size = 12))
-
-coef_plot
-
-ggsave("../output/social_feedback_coef.pdf", coef_plot, width = 2, height = 4)
-
-feedback_combi <- grid.arrange(coef_plot,feedback_plot, nrow = 1, widths = c(2,4))
-ggsave("../output/social_feedback_combi.pdf", feedback_combi, width = 6, height = 3)
+ggsave("../output/social_feedback_raw.pdf", feedback_plot, width = 5, height = 3)
 
 ```
+
 
 
 # Modeling Drop-out with Survival Models
@@ -188,7 +219,9 @@ cox_coef_plot <- ggplot(coef_df, aes(x = estimate, y = term, color = term)) +
   )) +
   theme_bw()+
   coord_flip()+
-  guides(color = "none")
+  guides(color = "none")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 cox_coef_plot
 ggsave("../output/cox_coef_plot.pdf", cox_coef_plot, width = 3, height = 4.5)
@@ -205,7 +238,7 @@ surv_fit <- survfit(Surv(time, status) ~ condition, data = survival_data)
 
 surv_group_plot <- ggsurvplot(surv_fit,
   data = survival_data,
-  ggtheme = theme_bw(),
+  ggtheme = theme_bw()+ theme(panel.grid = element_blank()),
   surv.median.line = "hv",
   pval = TRUE,
   pval.size = 3,
@@ -237,7 +270,7 @@ surv_fit <- survfit(Surv(time, status) ~ toxicity_group, data = survival_data)
 
 surv_tox_plot <- ggsurvplot(surv_fit,
   data = survival_data,
-  ggtheme = theme_bw(),
+  ggtheme = theme_bw()+ theme(panel.grid = element_blank()),
   surv.median.line = "hv",
   pval = TRUE,
   pval.size = 3,

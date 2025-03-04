@@ -57,13 +57,16 @@ gini_inc <- round(Gini(full_data%>%filter(condition=="incentives")%>%pull(commen
 
 participation <- ggplot(full_data, aes(comment_count, colour = condition, fill = condition))+
   geom_density(linewidth = 1, alpha = 0.3)+
-  theme_bw(base_size=13)+
+  theme_bw(base_size=15)+
   ylab("")+
   ggtitle("Participation distributions across conditions")+
-  scale_color_manual(values = c("#70facb","#29c195","#6699FF"))+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_color_manual(values = c("grey","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   xlab("Number of comments written per user in experiment")+
-  theme(legend.title = element_blank(), legend.position = c(0.8, 0.8))
+  theme(legend.title = element_blank(), legend.position = c(0.8, 0.8),
+        
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # gini coefficients with confidence intervals
 control <- Gini(full_data%>%filter(condition=="control")%>%pull(comment_count), conf.level = 0.95, unbiased = T)
@@ -86,7 +89,9 @@ gini_plot <- ggplot(ginis, aes(y = gini, x = condition,  colour = condition))+
   theme_bw(base_size = 13)+
   ylab("Gini coef. with 95% bootstrapped CIs")+
   ggtitle("Participation Gini coefficients")+
-  theme(axis.text=element_text(size=13))
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi <- grid.arrange(participation, gini_plot, widths = c(3,2.5))
 
@@ -106,7 +111,9 @@ bars <- scaled_sample%>%
   theme_bw()+
   facet_grid(. ~ condition)+
   geom_text(stat = "count", aes(factor(active2), label = ..count..), 
-            vjust = 1.5)
+            vjust = 1.5)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 bars
 
@@ -133,10 +140,12 @@ toxicity <- ggplot(discussion_data, aes(comment_toxicity, colour = condition, fi
   theme_bw(base_size=13)+
   ylab("")+
   ggtitle("Toxicity distributions across experimental conditions")+
-  scale_color_manual(values = c("#70facb","#29c195","#6699FF"))+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_color_manual(values = c("grey","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   xlab("Comment toxicity")+
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # linear model 
 tox_model <- lm_robust(comment_toxicity ~ condition, data = discussion_data)
@@ -156,10 +165,13 @@ tox_plot <- ggplot(tox_model_tidy, aes(x = estimate, y = term, color = term)) +
   theme_bw(base_size = 13) +
   xlab("Linear model, HC2 robust SE, 95% CI") +
   ggtitle("Comment toxicity by condition") +
-  scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
+  scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195"),
+                     labels = c("moderation" = "Moderation", "incentives" = "Incentives")) +
   guides(color = "none") +
   ylab("")+
-  theme(axis.text=element_text(size=13))
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi2 <- grid.arrange(toxicity, tox_plot, widths = c(3,3))
 
@@ -189,21 +201,21 @@ tox_model_inter_tidy <- tidy(tox_model_inter, conf.int = TRUE) %>%
       grepl("incentives", term) ~ "#29C195",
       TRUE ~ "black"),
     term_label = recode(term,
-      `conditionmoderation` = "Moderation Condition",
-      `conditionincentives` = "Incentives Condition",
+      `conditionmoderation` = "Moderation \n Condition",
+      `conditionincentives` = "Incentives \n Condition",
       `gender_male` = "Male Gender",
-      `polinterest_w1` = "Political Interest",
-      `conditionmoderation:gender_male` = "Moderation x Male Gender",
-      `conditionincentives:gender_male` = "Incentives x Male Gender",
-      `conditionmoderation:polinterest_w1` = "Moderation x Political Interest",
-      `conditionincentives:polinterest_w1` = "Incentives x Political Interest"))
+      `polinterest_w1` = "Political \n Interest",
+      `conditionmoderation:gender_male` = "Moderation x \n Male Gender",
+      `conditionincentives:gender_male` = "Incentives x \n Male Gender",
+      `conditionmoderation:polinterest_w1` = "Moderation x \n Political Interest",
+      `conditionincentives:polinterest_w1` = "Incentives x \n Political Interest"))
 
-term_order <- rev(c("Moderation Condition",
-  "Incentives Condition","Male Gender","Political Interest",
-  "Moderation x Male Gender",
-  "Incentives x Male Gender",
-  "Moderation x Political Interest",
-  "Incentives x Political Interest"))
+term_order <- rev(c("Moderation \n Condition",
+  "Incentives \n Condition","Male Gender","Political \n Interest",
+  "Moderation x \n Male Gender",
+  "Incentives x \n Male Gender",
+  "Moderation x \n Political Interest",
+  "Incentives x \n Political Interest"))
 
 # Update term_label to be a factor with the specified order
 tox_model_inter_tidy <- tox_model_inter_tidy %>%
@@ -222,11 +234,14 @@ tox_plot_inter <- ggplot(tox_model_inter_tidy, aes(x = estimate, y = term_label,
   guides(color = "none") +
   ylab("") +
   theme_bw(base_size = 13)+
-  theme(axis.text = element_text(size = 13))
+  theme(axis.text = element_text(size = 13),
+        legend.position = "top",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 tox_plot_inter
 
-ggsave("../output/tox_plot_HTE.pdf", tox_plot_inter, width = 7, height = 5)
+ggsave("../output/tox_plot_HTE.pdf", tox_plot_inter, width = 5, height = 6)
 ```
 
 ## Distribution of Comment length
@@ -250,11 +265,13 @@ length <- ggplot(discussion_data, aes(length_comment_char, colour = condition, f
   theme_bw(base_size=13)+
   ylab("")+
   ggtitle("Comment length distributions across experimental conditions")+
-  scale_color_manual(values = c("#70facb","#29c195","#6699FF"))+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_color_manual(values = c("grey","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   xlab("Comment length in characters")+
   xlim(c(0,3000))+
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # linear model 
 l_model <- lm_robust(length_comment_char ~ condition, data = discussion_data)
@@ -276,7 +293,9 @@ l_plot <- ggplot(l_model_tidy, aes(x = estimate, y = term, color = term)) +
   scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
   guides(color = "none") +
   ylab("")+
-  theme(axis.text=element_text(size=13))
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
  
 combi2 <- grid.arrange(length, l_plot, widths = c(3,3))
 
@@ -304,11 +323,13 @@ polarization <- ggplot(full_data, aes(polarization_delta, colour = condition, fi
   theme_bw(base_size=13)+
   ylab("")+
   ggtitle("Affective polarization across experimental conditions")+
-  scale_color_manual(values = c("#70facb","#29c195","#6699FF"))+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_color_manual(values = c("grey","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   xlab("Change in affective polarization (pre-post)")+
   theme(legend.title = element_blank())+
-  xlim(c(-100,100))
+  xlim(c(-100,100))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # linear model 
 pol_model <- lm_robust(polarization_delta ~ condition, data = full_data)
@@ -328,7 +349,9 @@ pol_plot <- ggplot(pol_model_tidy, aes(x = estimate, y = term, color = term)) +
   scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
   guides(color = "none") +
   ylab("")+
-  theme(axis.text=element_text(size=13))
+  theme(axis.text=element_text(size=13))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
  
 combi3 <- grid.arrange(polarization, pol_plot, widths = c(3,3))
 
@@ -366,10 +389,12 @@ for (i in 1:length(trust_variables)) {
     ylab("") +
     xlim(c(-3, 3)) +
     ggtitle(paste0(trust_title, " across experimental conditions")) +
-    scale_color_manual(values = c("#70facb", "#29c195", "#6699FF")) +
-    scale_fill_manual(values = c("#70facb", "#29c195", "#6699FF")) +
+    scale_color_manual(values = c("grey", "#29c195", "#6699FF")) +
+    scale_fill_manual(values = c("grey", "#29c195", "#6699FF")) +
     xlab(paste0("Change in ", trust_title, " (pre-post)")) +
-    theme(legend.title = element_blank()) 
+    theme(legend.title = element_blank()) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
   
   # Linear model for trust delta
   trust_model <- lm_robust(trust_delta ~ factor(condition), data = full_data)
@@ -390,7 +415,9 @@ for (i in 1:length(trust_variables)) {
     scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
     guides(color = "none") +
     ylab("")+
-    theme(axis.text=element_text(size=13))
+    theme(axis.text=element_text(size=13))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
   
      
   combi_plot <- grid.arrange(trust_distribution, trust_plot, widths = c(3, 3))
@@ -416,11 +443,13 @@ leftright <- ggplot(full_data, aes(lr_delta, colour = condition, fill = conditio
   theme_bw(base_size=13)+
   ylab("")+
   ggtitle("Changes on left-right scale across conditions")+
-  scale_color_manual(values = c("#70facb","#29c195","#6699FF"))+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_color_manual(values = c("grey","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   xlab("Changes on left-right scale")+
   xlim(c(-3,3))+
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # linear model 
 lr_model <- lm_robust(lr_delta ~ condition, data = full_data)
@@ -442,7 +471,9 @@ lr_plot <- ggplot(lr_model_tidy, aes(x = estimate, y = term, color = term)) +
   scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
   guides(color = "none") +
   ylab("")+
-    theme(axis.text=element_text(size=13))
+    theme(axis.text=element_text(size=13))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
  
 leftright <- grid.arrange(leftright, lr_plot, widths = c(3,3))
 
@@ -464,10 +495,12 @@ polinterest_distribution <- ggplot(full_data, aes(polinterest_delta, colour = co
   ylab("") +
   xlim(c(-3, 3)) +
   ggtitle("Political Interest across experimental conditions") +
-  scale_color_manual(values = c("#70facb", "#29c195", "#6699FF")) +
-  scale_fill_manual(values = c("#70facb", "#29c195", "#6699FF")) +
+  scale_color_manual(values = c("grey", "#29c195", "#6699FF")) +
+  scale_fill_manual(values = c("grey", "#29c195", "#6699FF")) +
   xlab("Change in Political Interest (pre-post)") +
-  theme(legend.title = element_blank()) 
+  theme(legend.title = element_blank()) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 polinterest_model <- lm_robust(polinterest_delta ~ factor(condition), data = full_data)
 
@@ -485,7 +518,9 @@ polinterest_plot <- ggplot(polinterest_model_tidy, aes(x = estimate, y = term, c
   scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#29C195")) +
   guides(color = "none") +
   ylab("")+
-  theme(axis.text=element_text(size=13))
+  theme(axis.text=element_text(size=13))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi_polinterest <- grid.arrange(polinterest_distribution, polinterest_plot, widths = c(3, 3))
 
@@ -525,12 +560,14 @@ motives <- full_data %>%
   mutate(Motives = factor(Motives))%>%
   ggplot(aes(x = reorder(Motives,Variable), y = Variable, fill = condition)) +
   geom_col(position="dodge", stat="identity")+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   ylab("")+
   xlab("")+
   ggtitle("Motives by condition")+
   theme_bw()+
-  coord_flip()
+  coord_flip()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/motives_conditions.pdf", motives, width = 5 , height = 4) 
 
@@ -553,12 +590,14 @@ barriers <- post_surveys %>%
   mutate(Barriers = factor(Barriers))%>%
   ggplot(aes(y = Variable, x = reorder(Barriers,Variable), fill = condition)) +
   geom_col(position="dodge", stat="identity")+
-  scale_fill_manual(values = c("#70facb","#29c195","#6699FF"))+
+  scale_fill_manual(values = c("grey","#29c195","#6699FF"))+
   ylab("")+
   xlab("")+
   ggtitle("Barriers by condition")+
   theme_bw()+
-  coord_flip()
+  coord_flip()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/barriers_conditions.pdf", barriers, width = 5 , height = 2) 
 

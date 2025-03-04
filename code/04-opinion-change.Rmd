@@ -116,7 +116,9 @@ prepost_plot <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Political variables")+
   xlab("")+
-  ylab("Before vs. after Discussion")
+  ylab("Before vs. after Discussion")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 prepost_plot
 
@@ -193,14 +195,17 @@ prepost_plot <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) +
                   lwd = 1, position = position_dodge(width = 2/3)) + 
   theme_bw(base_size=13)+ 
   coord_flip()+
-  ggtitle("Political variables by Condition")+
+  ggtitle("Political variables by condition")+
   xlab("")+
   ylab("Before vs. After Discussion") +
-  scale_color_manual(values = c("#29c195","#6699FF"))  # Customize color palette
+  scale_color_manual(values = c("#29c195","#6699FF"))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "top")
 
 prepost_plot
 
-ggsave("../output/prepost_plot_condition.pdf", prepost_plot, width = 6, height = 4)
+ggsave("../output/prepost_plot_condition.pdf", prepost_plot, width = 5, height = 5)
 ```
 
 ## Political Variable Change between Active vs. Passive
@@ -244,7 +249,9 @@ prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Binary activity")+
   xlab("")+
-  ylab("Before vs. After Discussion") 
+  ylab("Before vs. After Discussion") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 # opinion change by continuous activity
@@ -288,7 +295,9 @@ prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Number of comments")+
   xlab("")+
-  ylab("Before vs. After Discussion") 
+  ylab("Before vs. After Discussion") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi <- grid.arrange(prepost_plot1, prepost_plot2, nrow = 1)
 
@@ -342,7 +351,9 @@ prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Binary activity (control only)")+
   xlab("")+
-  ylab("Before vs. After Discussion") 
+  ylab("Before vs. After Discussion") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 # continuous comment count, control only 
@@ -384,7 +395,9 @@ prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Number of comments (control only)")+
   xlab("")+
-  ylab("Before vs. After Discussion") 
+  ylab("Before vs. After Discussion") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi <- grid.arrange(prepost_plot1, prepost_plot2, nrow = 1)
 
@@ -455,7 +468,9 @@ prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Average changes in issue attitudes")+
   xlab("")+
-  ylab("Partial pooling, participant and group random intercepts")
+  ylab("Partial pooling, participant and group random intercepts")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 prepost_plot_issues
 
@@ -518,7 +533,9 @@ prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable), group = Condit
   scale_color_manual(values = c("#29c195","#6699FF"))+ 
   ggtitle("Change in issue attitudes by condition")+
   xlab("")+
-  ylab("Partial pooling, participant and group random intercepts")
+  ylab("Partial pooling, participant and group random intercepts")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 prepost_plot_issues
 
@@ -578,7 +595,9 @@ prepost_plot_issues1 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change in issue attitudes by activity", subtitle = "Binary activity")+
   xlab("")+
-  ylab("Partial pooling, participant and group random intercepts")
+  ylab("Partial pooling, participant and group random intercepts")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 # continuous comment count 
@@ -630,7 +649,9 @@ prepost_plot_issues2 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change in issue attitudes by activity", subtitle = "Number of comments")+
   xlab("")+
-  ylab("Partial pooling, participant and group random intercepts")
+  ylab("Partial pooling, participant and group random intercepts")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 combi <- grid.arrange(prepost_plot_issues1, prepost_plot_issues2, nrow = 1)
@@ -692,7 +713,9 @@ prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Issue knowledge change")+
   xlab("")+
-  ylab("Partial pooling, pre vs. post comparison")
+  ylab("Partial pooling, pre vs. post comparison")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 prepost_plot_knowledge
 
@@ -761,7 +784,9 @@ prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable), group = Con
   ggtitle("Issue Knowledge Change by Condition")+
   xlab("")+
   ylab("Pre vs. Post Comparison") +
-  scale_color_manual(values = c("#29c195","#6699FF"))
+  scale_color_manual(values = c("#29c195","#6699FF"))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 prepost_plot_knowledge
 
@@ -806,7 +831,9 @@ attitudes <- ggplot(attitudes_data, aes(y = n, x = Attitude)) +
   guides(fill = "none")+
   xlab("1: Strongly disagree - 6: Strongly agree")+
   ggtitle("Issue Attitudes W1 (before discussions) vs. W5 (after discussions)")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 attitudes
 
 ggsave("../output/attitudes_w1w5.pdf", attitudes, width = 10 , height = 5)
@@ -865,7 +892,9 @@ issue_mod_plot <- ggplot(combined_tidy, aes(x = estimate, y = rev(term), color =
                              "Gender", "Toxicity perception", "Issue distance", "Political Interest",
                              "Political Orientation", "Comment count", "Discussions")) +
   xlab("Partial pooling with participant and group random intercept") +
-  ggtitle("Conditional overtime changes in issue attitudes")
+  ggtitle("Conditional overtime changes in issue attitudes")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 issue_mod_plot
 
@@ -952,7 +981,9 @@ ioc_migration <- ggplot() +
   #guides(color = "none")+
   theme_bw()+
   facet_wrap(. ~ subreddit, ncol = 1)+
-  ggtitle("Individual Migration Attitude Trajectories", subtitle = "Agreement with: \"Immigration should be regulated more strictly.\"")
+  ggtitle("Individual Migration Attitude Trajectories", subtitle = "Agreement with: \"Immigration should be regulated more strictly.\"")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 ggsave("../output/ioc_migration.pdf", ioc_migration, width = 6 , height = 12) 
@@ -1034,7 +1065,9 @@ ioc_gender <- ggplot() +
   #guides(color = "none")+
   theme_bw()+
   facet_wrap(. ~ subreddit, ncol = 1)+
-  ggtitle("Individual Gender Attitude Trajectories", subtitle = "Agreement with: \"Gender neutral language and pronouns are silly issues.\"")
+  ggtitle("Individual Gender Attitude Trajectories", subtitle = "Agreement with: \"Gender neutral language and pronouns are silly issues.\"")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 

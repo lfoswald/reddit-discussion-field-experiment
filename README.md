@@ -29,3 +29,10 @@ Visualization of comment graphs and user interaction networks, analysis of degre
 
 [`05-networks.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/05-networks.Rmd) / [`05-networks.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/05-networks.html)
 
+## Temporal Models
+Analyses of social feedback (examining the effects of up-voting and down-voting on subsequent comment activity) and survival analyses to model discussion dropout. 
+
+[`06-temporal-models.Rmd`](https://github.com/lfoswald/reddit-discussion-field-experiment/blob/main/code/06-temporal-models.Rmd) / [`06-temporal-models.html`](https://raw.githack.com/lfoswald/reddit-discussion-field-experiment/main/code/06-temporal-models.html)
+
+
+

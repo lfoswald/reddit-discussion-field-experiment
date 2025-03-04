@@ -38,7 +38,6 @@ post_surveys <- read_csv("../data/anon/post_surveys_anon.csv")
 Combine survey and reddit data
 ```{r}
 ## Reddit metrics by user - add to sample
-
 user_comments <- discussion_data%>%
   group_by(ParticipantID)%>%
   mutate(comment_count = n(),
@@ -100,13 +99,17 @@ bars <- sample%>%
   annotate(geom = "text", x = "join only",   y = 85, label = "97")+
   annotate(geom = "text", x = "no",   y = 80, label = "92")+
   annotate(geom = "text", x = "yes",   y = 319, label = "331")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
   
 histog <- ggplot(sample)+
   geom_bar(aes(comment_count), fill = "#6699FF")+
   xlab("Comments written in experiment")+
   ylab("Number of users")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 dots <- ggplot(sample)+
   geom_point(aes(comment_count, log(comment_karma+1), colour = comment_mean_tox, 
@@ -116,7 +119,9 @@ dots <- ggplot(sample)+
   xlab("Comments written in experiment")+
   ylab("Comment karma on Reddit (log-scale)")+
   theme_bw()+
-  guides(colour = guide_legend(title="Toxicity"), size = guide_legend(title="Length"))
+  guides(colour = guide_legend(title="Toxicity"), size = guide_legend(title="Length"))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 combi2 <- grid.arrange(bars, histog, widths = c(3,4.5), top = "User level discussion participation")
 
@@ -143,7 +148,9 @@ ageplot <- ggplot(sample)+
   annotate(geom="text", x=60, y=30,hjust = 0, label= paste("Male: ",table(sample$gender)[1]))+
   annotate(geom="text", x=60, y=28,hjust = 0, label= paste("Female: ",table(sample$gender)[2]))+
   annotate(geom="text", x=60, y=26,hjust = 0, label= paste("Other: ",table(sample$gender)[3]))+
-  annotate(geom="text", x=60, y=33,hjust = 0, label= paste("N: ", nrow(sample)),fontface =2)
+  annotate(geom="text", x=60, y=33,hjust = 0, label= paste("N: ", nrow(sample)),fontface =2)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 educplot <- ggplot(sample)+
   geom_bar(aes(education), fill = "#6699FF")+
@@ -156,7 +163,9 @@ educplot <- ggplot(sample)+
   annotate(geom="text", x = 3, y = 0, hjust = 0, label = "Some college education, no degree")+
   annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Bachelor's degree")+
   annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Some postgraduate education, no degree")+
-  annotate(geom="text", x = 6, y = 0, hjust = 0, label = "Postgraduate degree")
+  annotate(geom="text", x = 6, y = 0, hjust = 0, label = "Postgraduate degree")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 demo <- grid.arrange(ageplot, educplot, nrow = 1,
                      top = "Age and education across study sample")
@@ -171,7 +180,9 @@ int <- ggplot(sample, aes(polinterest))+
   xlab("")+
   ylab("")+
   theme_bw()+
-  xlim("Not interested", "Sighly interested","Moderately interested", "Very interested")
+  xlim("Not interested", "Sighly interested","Moderately interested", "Very interested")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 pol <- ggplot(sample)+
   geom_bar(aes(x = leftright, fill = ..x..))+
@@ -184,7 +195,9 @@ pol <- ggplot(sample)+
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())+
   xlim("far left", "", "", "", "", "", "", "",
-       "", "", "far right")
+       "", "", "far right")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 polint <- grid.arrange(int, pol, nrow = 1)
 
@@ -236,7 +249,9 @@ tox_ridge <- ggplot(discussion_data)+
   theme_ridges() + 
   scale_fill_manual(values = colour_values) +
   scale_x_continuous(limits = c(0, 0.6))+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 tox_ridge
 
 ggsave("../output/toxicity_issues_ridges.pdf", tox_ridge, width = 10, height = 6)
@@ -255,7 +270,9 @@ views <- discussion_data%>%
   ylab("")+
   guides(color = "none")+
   ggtitle("Views per post")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 comments <- discussion_data%>%
   group_by(subreddit,date(created_post))%>%
@@ -268,7 +285,9 @@ comments <- discussion_data%>%
   ylab("")+
   guides(color = "none")+
   ggtitle("Comments per post")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 comments_views <- discussion_data%>%
   mutate(comments_per_views = `Collected comments`/total_views)%>%
@@ -281,7 +300,9 @@ comments_views <- discussion_data%>%
   scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
   ylab("")+
   ggtitle("Comments/views ratio")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 activity_combi <- grid.arrange(views, comments, comments_views, nrow=1, widths = c(3,3,4))
 
@@ -297,7 +318,9 @@ toxicity <- ggplot(discussion_data, aes(x = date(created_post), y = comment_toxi
   ylab("")+
   guides(color = "none")+
   ggtitle("Comment toxicity")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 length <- ggplot(discussion_data, aes(x = date(created_post), y = length_comment_char, color = subreddit))+
   geom_smooth(method = loess,alpha=0.1)+
@@ -307,7 +330,9 @@ length <- ggplot(discussion_data, aes(x = date(created_post), y = length_comment
   ylab("")+
   guides(color = "none")+
   ggtitle("Comment length")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 score <- discussion_data%>%
   group_by(subreddit,date(created_post))%>%
@@ -320,7 +345,9 @@ score <- discussion_data%>%
   scale_color_manual(values = c("#29c195","#6699ff","#424656","#a7aabd","#f96d86","#bc3455"))+
   ylab("")+
   ggtitle("Post score/views ratio")+
-  xlab("Date")
+  xlab("Date")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 characteristics_combi <- grid.arrange(toxicity, length, score, nrow=1, widths = c(3,3,4))
 
@@ -333,10 +360,12 @@ ggsave("../output/characteristics_combi.pdf", characteristics_combi, width = 14,
 comments_tox <- ggplot(sample,aes(x = comment_mean_tox, y = ex_comment_mean_tox, size = comment_count))+
   geom_point(alpha = 0.5, color = "#6699FF")+
   theme_bw()+
-  xlab("Average comment toxicity in experiment")+
+  xlab("Exp. comment toxicity")+
   ylab("Average external comment toxicity")+
   guides(color = "none", size = "none")+
-  geom_abline()
+  geom_abline()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 cor.test(sample$comment_mean_tox,sample$ex_comment_mean_tox)
 
@@ -344,17 +373,19 @@ comments_length <- ggplot(sample,aes(x = comment_mean_lenght, y = ex_comment_mea
                                      size = comment_count))+
   geom_point(alpha = 0.5, color = "#6699FF")+
   theme_bw()+
-  xlab("Average comment length in experiment")+
+  xlab("Exp. comment length")+
   ylab("Average external comment length")+
   guides(color = "none", size = "none")+
-  geom_abline()
+  geom_abline()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 cor.test(sample$comment_mean_lenght,sample$ex_comment_mean_lenght)
 
 cor.test(log(sample$comment_karma),sample$comment_count)
 
-comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 1, top = "Comment characteristics per active user")
-ggsave("../output/comment_tox_length.pdf", comment_tox_length, width = 7 , height = 3.5)
+comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 1)
+ggsave("../output/comment_tox_length_narrow.pdf", comment_tox_length, width = 5 , height = 3)
 ```
 
 ## Comment karma and platform seniority
@@ -364,13 +395,17 @@ k1 <- ggplot(sample)+
   geom_histogram(aes(comment_karma), fill = "#6699FF")+
   theme_bw()+
   ylab("Number of users")+
-  xlab("Comment Karma")
+  xlab("Comment Karma")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 k2 <- ggplot(sample)+
   geom_histogram(aes(log(comment_karma)), fill = "#6699FF")+
   theme_bw()+
   ylab("Number of users")+
-  xlab("Comment Karma (Log-scale)")
+  xlab("Comment Karma (Log-scale)")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 create <- ggplot(sample)+
   geom_histogram(aes(date(created)), fill = "lightgrey", bins = 100)+
@@ -378,7 +413,9 @@ create <- ggplot(sample)+
   annotate("text", x = max(date(sample$created), na.rm = TRUE), y = Inf, label = paste("Last:", max(date(sample$created), na.rm = T)), vjust = 2, hjust = 1)+
   theme_bw()+
   ylab("Number of accounts")+
-  xlab("Date joined Reddit")
+  xlab("Date joined Reddit")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 kplot <- grid.arrange(k2,create, nrow = 1,
                       top = paste0("Distributions of platform seniority (N = ",nrow(sample),") Start of recruitment: 2024-05-09"))
@@ -428,10 +465,12 @@ int_ext <- ggplot(daily_summary, aes(x = created_comment, y = avg_toxicity)) +
   scale_size_continuous(range = c(1, 5)) +  
   theme_minimal() +
   theme(legend.position = "right",
-    plot.title = element_text(hjust = 0.5))
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
 int_ext
 
-ggsave("../output/internal_external_toxicity.pdf", int_ext, width = 8, height = 3)
+ggsave("../output/internal_external_toxicity.pdf", int_ext, width = 9, height = 4)
 ```
 
 
@@ -465,218 +504,16 @@ int_ext_act <- ggplot(daily_summary, aes(x = created_comment, y = comment_volume
   scale_alpha_continuous(range = c(0.2, 1)) + 
   theme_minimal() +
   theme(legend.position = "right",
-    plot.title = element_text(hjust = 0.5))
+    plot.title = element_text(hjust = 0.5))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 int_ext_act
 
 ggsave("../output/internal_external_activity.pdf", int_ext_act, width = 9, height = 3)
 ```
 
-### WS Addition: Relative change in commenting activity
-
-```{r}
-#colors
-colors <- c(control = "gray", incentives = "#29c195", moderation = "#6699FF")
-
-#adjust alphas to .7
-colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolor("#29c195", alpha.f = .7), moderation = adjustcolor("#6699FF", alpha.f = .7))
-```
-
-```{r}
-comment_data_ranges <- daily_summary_act %>% group_by(ParticipantID) %>% dplyr::summarize(earliest_comment = min(created_comment), latest_comment = max(created_comment))
-
-#plot hist of earliest and latest comment dates
-hist(comment_data_ranges$earliest_comment, breaks = 20, main = "Earliest comment date", xlab = "Date")
-hist(comment_data_ranges$latest_comment, breaks = 20, main = "Latest comment date", xlab = "Date")
-
-min(comment_data_ranges$earliest_comment)
-max(comment_data_ranges$latest_comment)
-
-study_start
-as.numeric(study_start)
-
-#calculate number of days between earliest comment and study start
-days_prestudy_period <- study_start - min(comment_data_ranges$earliest_comment)
-
-#calculate mean number of comments per day in the pre-study period
-mean_prestudy_daily_comments <- daily_summary_act %>%
-  filter(created_comment < study_start) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(mean_daily_comments_prestudy = sum(comment_volume)/as.numeric(days_prestudy_period))
-
-mean_prestudy_daily_comments
-
-#calculate mean number of comments-per day in the study period, within study
-mean_duringstudy_int_daily_comments <- daily_summary_act %>% filter(source == "internal") %>%
-  filter(created_comment >= study_start & created_comment <= study_end) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(mean_daily_comments_instudy = sum(comment_volume)/as.numeric(study_end - study_start))
-
-#calculate mean number of comments-per day in the study period, outside study
-mean_duringstudy_ext_daily_comments <- daily_summary_act %>% filter(source == "external") %>%
-  filter(created_comment >= study_start & created_comment <= study_end) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(mean_daily_comments_extstudy = sum(comment_volume)/as.numeric(study_end - study_start))
-
-#join the two dataframes
-mean_daily_comments <- left_join(mean_prestudy_daily_comments, mean_duringstudy_int_daily_comments, by = "ParticipantID")
-mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_ext_daily_comments, by = "ParticipantID")
-```
-
-
-```{r}
-#to do: add calculation of prob(comment_at_all) per day
-#daily_summary_act %>% pull(created_comment) %>% unique %>% hist(breaks = "day")
-#daily_summary_act %>% pull(created_comment) %>% hist(breaks = "day") 
-
-daily_summary_act_complete <- daily_summary_act %>%
-  complete(source, ParticipantID, created_comment = seq.Date(min(created_comment), max(created_comment), by = "day"), fill = list(comment_volume = 0, avg_toxicity = NA))
-
-daily_summary_act_complete
-
-mean_duringstudy_int_commentprob <- daily_summary_act_complete %>% filter(source == "internal") %>%
-  filter(created_comment >= study_start & created_comment <= study_end) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(duringstudy_int_daily_commentprob = sum(comment_volume!=0)/as.numeric(study_end - study_start))
-
-mean_duringstudy_int_commentprob
-
-mean_duringstudy_ext_commentprob <- daily_summary_act_complete %>% filter(source == "external") %>%
-  filter(created_comment >= study_start & created_comment <= study_end) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(duringstudy_ext_daily_commentprob = sum(comment_volume!=0)/as.numeric(study_end - study_start))
-
-mean_prestudy_commentprob <- daily_summary_act_complete %>%
-  filter(created_comment < study_start) %>%
-  group_by(ParticipantID) %>%
-  dplyr::summarize(prestudy_daily_commentprob = sum(comment_volume!=0)/as.numeric(days_prestudy_period))
-
-mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_int_commentprob, by = "ParticipantID")
-mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_ext_commentprob, by = "ParticipantID")
-mean_daily_comments <- left_join(mean_daily_comments, mean_prestudy_commentprob, by = "ParticipantID")
-```
-
-
-
-```{r}
-# join mean_daily_comments to sample
-s <- left_join(sample, mean_daily_comments, by = "ParticipantID")
-
-#come back and use S for this
-daily_summary_act %>% pull(created_comment) %>% hist(breaks = "day") 
-
-# bar chart of comment count by day, stacked by source=="internal" vs source=="external"
-barplot(table(daily_summary_act$source, daily_summary_act$created_comment), beside = T, col = c("grey50", "#6699FF"), legend = T, border = NA)
-
-```
-
-
-
-
-
-
-```{r, fig.width=10, fig.height=5}
-# break down by condition
-control <- s %>% filter(condition == "control")
-moderation <- s %>% filter(condition == "moderation")
-incentives <- s %>% filter(condition == "incentives")
-
-# copy of 3-gang version subset by condition, not logged
-this_xlim = c(0,12)
-this_ylim = c(0,5)
-
-par(pty="s", mfrow = c(1,3), cex = .6)
-plot((control$mean_daily_comments_prestudy), (control$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Control", pch = 16, col = colors['control'], xlim = this_xlim, ylim = this_ylim)
-abline(0,1)
-plot((moderation$mean_daily_comments_prestudy), (moderation$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Moderation", pch = 16, col = colors['moderation'], xlim = this_xlim, ylim = this_ylim)
-abline(0,1)
-plot((incentives$mean_daily_comments_prestudy), (incentives$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Incentives", pch = 16, col = colors['incentives'], xlim = this_xlim, ylim = this_ylim)
-abline(0,1)
-
-```
-
-
-```{r}
-#plot ratio by prestudy
-s <- s %>% mutate(prestudy_instudy_comment_ratio = mean_daily_comments_instudy/mean_daily_comments_prestudy)
-
-control <- s %>% filter(condition == "control")
-moderation <- s %>% filter(condition == "moderation")
-incentives <- s %>% filter(condition == "incentives")
-
-par(cex = .8)
-plot(control$mean_daily_comments_prestudy, control$prestudy_instudy_comment_ratio, xlab = "Mean daily comments pre-study", ylab = "In-Study/Pre-Study", main = "Mean daily comments in study / pre-study ", pch = 16, col = colors['control'])
-points(moderation$mean_daily_comments_prestudy, moderation$prestudy_instudy_comment_ratio, pch = 16, col = colors['moderation'])
-points(incentives$mean_daily_comments_prestudy, incentives$prestudy_instudy_comment_ratio, pch = 16, col = colors['incentives'])
-
-```
-
-
-
-```{r, fig.width=14, fig.height=8}
-#plot difference by prestudy
-s <- s %>% mutate(prestudy_instudy_comment_difference = mean_daily_comments_instudy-mean_daily_comments_prestudy)
-
-control <- s %>% filter(condition == "control")
-moderation <- s %>% filter(condition == "moderation")
-incentives <- s %>% filter(condition == "incentives")
-
-par(cex = .8)
-plot(control$mean_daily_comments_prestudy, control$prestudy_instudy_comment_difference, xlab = "Mean daily comments pre-study", ylab = "In-Study - Pre-Study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'])
-points(moderation$mean_daily_comments_prestudy, moderation$prestudy_instudy_comment_difference, pch = 16, col = colors['moderation'])
-points(incentives$mean_daily_comments_prestudy, incentives$prestudy_instudy_comment_difference, pch = 16, col = colors['incentives'])
-abline(h = 0, lty = 2)
-abline(0,-1)
-```
-
-
-
-
-
-```{r, fig.width=8, fig.height=10}
-#### Make Raw non-diff versions
-#keep
-#pdf("ws_outputs/comment_raw_by_prestudy_quantile.pdf", width = 8, height = 10)
-
-s <- s %>% mutate(prestudy_quantile_bin = cut(mean_daily_comments_prestudy, breaks = quantile(mean_daily_comments_prestudy, probs = seq(0, 1, by = 0.25), na.rm = TRUE)))
-
-# plot s subsets
-control <- s %>% filter(condition == "control") %>% select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% drop_na()
-moderation <- s %>% filter(condition == "moderation") %>% select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% drop_na()
-incentives <- s %>% filter(condition == "incentives") %>% select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% drop_na()
-
-#fill out the missing bins in control
-bins <- s %>% pull(prestudy_quantile_bin) %>% unique()
-#remove NA values and put in order
-bins <- bins[!is.na(bins)]
-bins <- bins[order(bins)]
-control <- control %>% complete(prestudy_quantile_bin = bins)
-
-par(mfrow = c(3,1))
-this_ylim = c(0,4)
-#this_ylim = NULL
-
-this_xlab = "Pre-Study Mean Daily Comments"
-this_ylab = "In-Study Mean Daily Comments"
-this_main = "Pre-Study vs In-Study Mean Daily Comments"
-
-boxplot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = control, xlab =this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['control'], ylim =this_ylim)
-#abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = moderation, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['moderation'], ylim = this_ylim)
-#abline(h = 0, lty = 2)
-#abline(0,-1)
-
-plot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = incentives, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['incentives'], ylim = this_ylim)
-#abline(h = 0, lty = 2)
-#abline(0,-1)
-
-legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
-
-#dev.off()
-
-```
+``
 
 
 
@@ -694,7 +531,9 @@ a <- ggplot(sample)+
   annotate(geom="text", x = 2, y = 0, hjust = 0, label = "Up to one hour per week")+
   annotate(geom="text", x = 3, y = 0, hjust = 0, label = "Up to one hour per day")+
   annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Multiple hours per day")+
-  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Almost the entire day")
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Almost the entire day")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 
 b <- ggplot(sample)+
@@ -707,7 +546,9 @@ b <- ggplot(sample)+
   annotate(geom="text", x = 3, y = 0, hjust = 0, label = "About once per day")+
   annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Multiple times per day")+
   annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Almost constantly")+
-  ylab("")
+  ylab("")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 c <- ggplot(sample)+
   geom_bar(aes(comments_online), fill = "#6699FF")+
@@ -720,7 +561,9 @@ c <- ggplot(sample)+
   annotate(geom="text", x = 2, y = 0, hjust = 0, label = "About once per month")+
   annotate(geom="text", x = 3, y = 0, hjust = 0, label = "About once per week")+
   annotate(geom="text", x = 4, y = 0, hjust = 0, label = "Almost daily")+
-  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Multiple times per day")
+  annotate(geom="text", x = 5, y = 0, hjust = 0, label = "Multiple times per day")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 abc <- grid.arrange(a, b, c, nrow = 1)
 ggsave("../output/online_activity.pdf", abc, width = 10 , height = 3) 
@@ -736,12 +579,16 @@ parties <- ggplot(sample)+
   ylab("")+
   annotate(geom = "text", x = 10, y = 0.04, hjust = 0,  label = "Rating of Republican Party")+
   annotate(geom = "text", x = 60, y = 0.02, hjust = 0, label = "Rating of Democratic Party")+
-  xlab("Party Rating: 0 = negative, 100 = positive")
+  xlab("Party Rating: 0 = negative, 100 = positive")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 dist <- ggplot(sample, aes(affective_polarization))+
   geom_density(fill = '#a7aabd', alpha = 0.5)+
   theme_bw()+
-  xlab("Affective Polarization (In party - out party)")
+  xlab("Affective Polarization (In party - out party)")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 polint <- grid.arrange(parties, dist, nrow = 1, top = "Affective Polarization")
 
@@ -773,7 +620,9 @@ trust <- sample %>%
   ylab("")+
   xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
   ggtitle("Trust")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 trust
 
 ggsave("../output/trust_matrix.pdf", trust, width = 4 , height = 5)
@@ -796,7 +645,9 @@ knowledge <- sample %>%
   ylab("")+
   xlab("1: Nothing, 2: A little, 3: A moderate amoung, 4: A lot")+
   ggtitle("Issue Knowledge T1")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 knowledge
 
 ggsave("../output/knowledge_matrix.pdf", knowledge, width = 10 , height = 8)
@@ -819,7 +670,9 @@ attitudes <- sample %>%
   ylab("")+
   xlab("1: Strongly disagree - 6: Strongly agree")+
   ggtitle("Issue Attitudes T1")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 attitudes
 
 ggsave("../output/attitudes_matrix.pdf", attitudes, width = 10 , height = 8) 
@@ -833,7 +686,9 @@ exp <- ggplot(post_surveys)+
   theme_bw()+
   ylab("")+
   xlab("Exposure Check: TP - FP, 5 topics, 5 distractors")+
-  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))
+  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/exposure_check.pdf", exp, width = 5, height = 3)
 
@@ -843,7 +698,9 @@ dist_abs <- ggplot(post_surveys)+
   theme_bw()+
   ylab("")+
   xlab("Absolute Issue Distance: | self - others |, aggregate over 5 topics")+
-  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))
+  scale_fill_manual(name = "Discussion week", values = rev(c("#6699FF","#70facb","#29c195","#008a62")))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 plot <- grid.arrange(exp,dist_abs, nrow = 1)
 
@@ -869,7 +726,9 @@ perceptions <- post_surveys %>%
   ylab("")+
   xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
   ggtitle("Discussion Perception")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/discussion_perception.pdf", perceptions, width = 6 , height = 4)
 ```
@@ -893,7 +752,9 @@ perceptions_g <- post_surveys %>%
   ylab("")+
   xlab("1: Not at all, 2: A little, 3: Quite a bit, 4: Very much")+
   ggtitle("Group Perception")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 plot <- grid.arrange(perceptions,perceptions_g, nrow = 1)
 
@@ -932,7 +793,9 @@ participation <- post_surveys %>%
   xlab("")+
   ggtitle("Self-reported participation")+
   theme_bw()+
-  coord_flip()
+  coord_flip()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/participation_check.pdf", participation, width = 6 , height = 4)
 ```
@@ -968,7 +831,9 @@ motives <- post_surveys %>%
   xlab("")+
   ggtitle("Motives for writing comments")+
   theme_bw()+
-  coord_flip()
+  coord_flip()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 ggsave("../output/motives.pdf", motives, width = 5 , height = 4)
 ```
@@ -995,7 +860,9 @@ barriers <- post_surveys %>%
   xlab("")+
   ggtitle("Barriers to writing comments")+
   theme_bw()+
-  coord_flip()
+  coord_flip()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 plot <- grid.arrange(participation,motives,barriers, nrow = 1)
 
@@ -1033,10 +900,197 @@ differences <- post_surveys %>%
   ylab("")+
   xlab("1: Very similar, 2: Somewhat similar, 3: Somewhat different, 4: Very different")+
   ggtitle("Perceived difference to typical experience on Reddit")+
-  theme_bw()
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 differences
 
 ggsave("../output/differences_perception.pdf", differences, width = 6 , height = 5) 
 ```
 
+
+## WS Addition: Relative change in commenting activity
+
+```{r}
+#colors
+colors <- c(control = "gray", incentives = "#29c195", moderation = "#6699FF")
+
+#adjust alphas to .7
+colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolor("#29c195", alpha.f = .7), moderation = adjustcolor("#6699FF", alpha.f = .7))
+
+comment_data_ranges <- daily_summary_act %>% group_by(ParticipantID) %>% dplyr::summarize(earliest_comment = min(created_comment), latest_comment = max(created_comment))
+
+#plot hist of earliest and latest comment dates
+h1 <- hist(comment_data_ranges$earliest_comment, breaks = 20, main = "Earliest comment date", xlab = "Date")
+h2 <- hist(comment_data_ranges$latest_comment, breaks = 20, main = "Latest comment date", xlab = "Date")
+
+#calculate number of days between earliest comment and study start
+days_prestudy_period <- study_start - min(comment_data_ranges$earliest_comment)
+
+#calculate mean number of comments per day in the pre-study period
+mean_prestudy_daily_comments <- daily_summary_act %>%
+  filter(created_comment < study_start) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(mean_daily_comments_prestudy = sum(comment_volume)/as.numeric(days_prestudy_period))
+
+#calculate mean number of comments-per day in the study period, within study
+mean_duringstudy_int_daily_comments <- daily_summary_act %>% filter(source == "internal") %>%
+  filter(created_comment >= study_start & created_comment <= study_end) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(mean_daily_comments_instudy = sum(comment_volume)/as.numeric(study_end - study_start))
+
+#calculate mean number of comments-per day in the study period, outside study
+mean_duringstudy_ext_daily_comments <- daily_summary_act %>% filter(source == "external") %>%
+  filter(created_comment >= study_start & created_comment <= study_end) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(mean_daily_comments_extstudy = sum(comment_volume)/as.numeric(study_end - study_start))
+
+#join the two dataframes
+mean_daily_comments <- left_join(mean_prestudy_daily_comments, mean_duringstudy_int_daily_comments, by = "ParticipantID")
+mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_ext_daily_comments, by = "ParticipantID")
+
+daily_summary_act_complete <- daily_summary_act %>%
+  complete(source, ParticipantID, created_comment = seq.Date(min(created_comment), max(created_comment), by = "day"), fill = list(comment_volume = 0, avg_toxicity = NA))
+
+mean_duringstudy_int_commentprob <- daily_summary_act_complete %>% filter(source == "internal") %>%
+  filter(created_comment >= study_start & created_comment <= study_end) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(duringstudy_int_daily_commentprob = sum(comment_volume!=0)/as.numeric(study_end - study_start))
+
+mean_duringstudy_ext_commentprob <- daily_summary_act_complete %>% filter(source == "external") %>%
+  filter(created_comment >= study_start & created_comment <= study_end) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(duringstudy_ext_daily_commentprob = sum(comment_volume!=0)/as.numeric(study_end - study_start))
+
+mean_prestudy_commentprob <- daily_summary_act_complete %>%
+  filter(created_comment < study_start) %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(prestudy_daily_commentprob = sum(comment_volume!=0)/as.numeric(days_prestudy_period))
+
+mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_int_commentprob, by = "ParticipantID")
+mean_daily_comments <- left_join(mean_daily_comments, mean_duringstudy_ext_commentprob, by = "ParticipantID")
+mean_daily_comments <- left_join(mean_daily_comments, mean_prestudy_commentprob, by = "ParticipantID")
+
+# join mean_daily_comments to sample
+s <- left_join(sample, mean_daily_comments, by = "ParticipantID")
+
+#come back and use S for this
+daily_summary_act %>% pull(created_comment) %>% hist(breaks = "day") 
+
+# bar chart of comment count by day, stacked by source=="internal" vs source=="external"
+barplot(table(daily_summary_act$source, daily_summary_act$created_comment), beside = T, col = c("grey50", "#6699FF"), legend = T, border = NA)
+
+```
+
+
+
+
+
+
+```{r, fig.width=10, fig.height=5}
+# break down by condition
+control <- s %>% filter(condition == "control")
+moderation <- s %>% filter(condition == "moderation")
+incentives <- s %>% filter(condition == "incentives")
+
+# copy of 3-gang version subset by condition, not logged
+this_xlim = c(0,12)
+this_ylim = c(0,5)
+
+par(pty="s", mfrow = c(1,3), cex = .6)
+plot((control$mean_daily_comments_prestudy), (control$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Control", pch = 16, col = colors['control'], xlim = this_xlim, ylim = this_ylim)
+abline(0,1)
+plot((moderation$mean_daily_comments_prestudy), (moderation$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Moderation", pch = 16, col = colors['moderation'], xlim = this_xlim, ylim = this_ylim)
+abline(0,1)
+plot((incentives$mean_daily_comments_prestudy), (incentives$mean_daily_comments_instudy), xlab = "Mean daily comments pre-study", ylab = "Mean daily comments in study", main = "Incentives", pch = 16, col = colors['incentives'], xlim = this_xlim, ylim = this_ylim)
+abline(0,1)
+```
+
+
+```{r}
+#plot ratio by prestudy
+s <- s %>% mutate(prestudy_instudy_comment_ratio = mean_daily_comments_instudy/mean_daily_comments_prestudy)
+
+control <- s %>% filter(condition == "control")
+moderation <- s %>% filter(condition == "moderation")
+incentives <- s %>% filter(condition == "incentives")
+
+par(cex = .8)
+plot(control$mean_daily_comments_prestudy, control$prestudy_instudy_comment_ratio, xlab = "Mean daily comments pre-study", ylab = "In-Study/Pre-Study", main = "Mean daily comments in study / pre-study ", pch = 16, col = colors['control'])
+points(moderation$mean_daily_comments_prestudy, moderation$prestudy_instudy_comment_ratio, pch = 16, col = colors['moderation'])
+points(incentives$mean_daily_comments_prestudy, incentives$prestudy_instudy_comment_ratio, pch = 16, col = colors['incentives'])
+
+```
+
+
+
+```{r, fig.width=14, fig.height=8}
+#plot difference by prestudy
+s <- s %>% mutate(prestudy_instudy_comment_difference = mean_daily_comments_instudy-mean_daily_comments_prestudy)
+
+control <- s %>% filter(condition == "control")
+moderation <- s %>% filter(condition == "moderation")
+incentives <- s %>% filter(condition == "incentives")
+
+par(cex = .8)
+plot(control$mean_daily_comments_prestudy, control$prestudy_instudy_comment_difference, xlab = "Mean daily comments pre-study", ylab = "In-Study - Pre-Study", main = "Mean daily comments pre-study vs in study", pch = 16, col = colors['control'])
+points(moderation$mean_daily_comments_prestudy, moderation$prestudy_instudy_comment_difference, pch = 16, col = colors['moderation'])
+points(incentives$mean_daily_comments_prestudy, incentives$prestudy_instudy_comment_difference, pch = 16, col = colors['incentives'])
+abline(h = 0, lty = 2)
+abline(0,-1)
+```
+
+
+```{r, fig.width=8, fig.height=10}
+#### Make Raw non-diff versions
+#keep
+#pdf("ws_outputs/comment_raw_by_prestudy_quantile.pdf", width = 8, height = 10)
+
+s <- s %>% 
+  mutate(prestudy_quantile_bin = cut(mean_daily_comments_prestudy, breaks = quantile(mean_daily_comments_prestudy, probs = seq(0, 1, by = 0.25), na.rm = TRUE)))
+
+# plot s subsets
+control <- s %>% filter(condition == "control") %>% 
+  select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% 
+  drop_na()
+moderation <- s %>% 
+  filter(condition == "moderation") %>% 
+  select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% 
+  drop_na()
+incentives <- s %>% 
+  filter(condition == "incentives") %>% 
+  select(prestudy_quantile_bin, mean_daily_comments_instudy) %>% 
+  drop_na()
+
+#fill out the missing bins in control
+bins <- s %>% pull(prestudy_quantile_bin) %>% unique()
+#remove NA values and put in order
+bins <- bins[!is.na(bins)]
+bins <- bins[order(bins)]
+control <- control %>% complete(prestudy_quantile_bin = bins)
+
+par(mfrow = c(3,1))
+this_ylim = c(0,4)
+#this_ylim = NULL
+
+this_xlab = "Pre-Study Mean Daily Comments"
+this_ylab = "In-Study Mean Daily Comments"
+this_main = "Pre-Study vs In-Study Mean Daily Comments"
+
+boxplot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = control, xlab =this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['control'], ylim =this_ylim)
+#abline(h = 0, lty = 2)
+#abline(0,-1)
+
+plot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = moderation, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['moderation'], ylim = this_ylim)
+#abline(h = 0, lty = 2)
+#abline(0,-1)
+
+plot(mean_daily_comments_instudy ~ prestudy_quantile_bin, data = incentives, xlab = this_xlab, ylab = this_ylab, main = this_main, pch = 16, col = colors['incentives'], ylim = this_ylim)
+#abline(h = 0, lty = 2)
+#abline(0,-1)
+
+legend("topright", legend = c("Control", "Moderation", "Incentives"), col = c(colors['control'], colors['moderation'], colors['incentives']), pch = 15, bty = "n")
+
+#dev.off()
+```
 
