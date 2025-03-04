@@ -96,7 +96,9 @@ scaled_sample <- full_data%>%
          mean_group_polarized = rowMeans(select(., starts_with("group_percep_2")), na.rm = TRUE),
          mean_group_respectful = rowMeans(select(., starts_with("group_percep_1")), na.rm = TRUE))%>%
   # scale selected variables with Gelman (2008) method by dividing by two standard deviations
-  select(ParticipantID, condition, subreddit_w1, comment_count, comment_mean_tox, active, active2, gender, age, education, comments_online_w1,  group_toxicity,
+  select(ParticipantID, condition, subreddit_w1, comment_count, comment_mean_tox,comment_mean_score,
+         ex_comment_mean_score, 
+         active, active2, gender, age, education, comments_online_w1,  group_toxicity,
          leftright_w1, polinterest_w1, affective_polarization_w1, 
          affective_pol_1_w1,affective_pol_2_w1,comment_karma,
          pol_cynicism_w1, efficacy_w1, trust_general_1_w1,
@@ -565,6 +567,77 @@ comment_plot_pred_active_ex0
 
 ggsave("../output/comment_plot_pred_active_excl0.pdf",comment_plot_pred_active_ex0, width = 4, height = 4)
 ```
+
+
+### Linear models to predict Scores (Excluding 0 and inactive)
+```{r}
+present_sample <- scaled_sample%>%filter(active == 1)
+
+mean(present_sample$comment_mean_score)
+sd(present_sample$comment_mean_score)
+max(present_sample$comment_mean_score)
+
+models <- list(
+  lm_robust(comment_mean_score ~ gender_male, data = present_sample),
+  lm_robust(comment_mean_score ~ age, data = present_sample),
+  lm_robust(comment_mean_score ~ education, data = present_sample),
+  lm_robust(comment_mean_score ~ comments_online_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ comment_karma, data = present_sample),
+  lm_robust(comment_mean_score ~ leftright_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ polinterest_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ affective_polarization_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_1_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_2_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_3_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ trust_general_4_w1, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_issue_distance_abs, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_group_respectful, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_group_knowledgeable, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_group_polarized, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_discussion_enjoyable, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_discussion_toxic, data = present_sample),
+  lm_robust(comment_mean_score ~ mean_discussion_constructive, data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1],  
+    pval = summary(models[[i]])$coef[,4],
+    SE = summary(models[[i]])$coef[-1, 2],         
+    Predictor = predictors[i]                       
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df%>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor)))%>%
+  group_by(Predictor)%>%
+  slice(2) 
+
+comment_plot_pred_active_ex0_score <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1/2, position = position_dodge(width = 2/3)) + 
+  guides(alpha = "none")+
+  theme_bw(base_size=10)+ 
+  coord_flip()+
+  ggtitle("Comment scores", subtitle = "Linear prediction of comment scores")+
+  xlab("")+
+  ylab("Scaled beta coefficients, HC2 robust SE")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+comment_plot_pred_active_ex0_score
+
+ggsave("../output/comment_plot_pred_active_excl0_score.pdf",comment_plot_pred_active_ex0_score, width = 4, height = 4)
+```
+
+
 
 
 # Hurdle models for different experimental conditions (start RQ2)
