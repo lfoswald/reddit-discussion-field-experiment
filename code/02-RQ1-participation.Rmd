@@ -1066,7 +1066,64 @@ knitr::kable(latex_table[, -grep("test", colnames(latex_table))],
                       format = "html", booktabs = TRUE)
 
 ```
+
+## Display "Profiles"
+
+```{r}
+profile_sample <- scaled_sample %>%
+  mutate(group = case_when(comment_count == 0 ~ "Never Comment",
+      comment_count > 0 & comment_count <= quantile(comment_count[comment_count > 0], 0.3) ~ "Infrequent Commenter",
+      comment_count > quantile(comment_count[comment_count > 0], 0.7) ~ "Frequent Commenter",
+      TRUE ~ NA_character_))
+
+table(profile_sample$group)
+
+profile_sample <- profile_sample %>% filter(!is.na(group))%>%
+  mutate(gender_male = as.numeric(as.character(gender_male)))%>%
+  rename_with(~ gsub("_", ".", .x))
+
+# Calculate means and confidence intervals for the specified variables by group
+summary_table <- profile_sample %>%
+  group_by(group) %>%
+  summarise(across(c(gender.male, comments.online.w1, polinterest.w1, 
+        mean.group.respectful, mean.group.knowledgeable, mean.group.polarized,
+        mean.discussion.enjoyable, mean.discussion.toxic, mean.discussion.constructive),
+      list(mean = ~mean(.x, na.rm = TRUE), 
+           lower = ~mean(.x, na.rm = TRUE) - qt(0.975, df=n()-1) * (sd(.x, na.rm = TRUE)/sqrt(n())), 
+           upper = ~mean(.x, na.rm = TRUE) + qt(0.975, df=n()-1) * (sd(.x, na.rm = TRUE)/sqrt(n())))))%>%
+  pivot_longer(-group, names_to = c("variable", "value"), names_sep = "_", names_repair = "unique")%>%
+  pivot_wider(names_from = value...3, values_from = value...4)
+
+variable_labels <- c(
+  gender.male = "Male Gender",
+  comments.online.w1 = "Commenting Online",
+  polinterest.w1 = "Political Interest",
+  mean.group.respectful = "Group respectful",
+  mean.group.knowledgeable = "Group knowledgeable",
+  mean.group.polarized = "Group polarized",
+  mean.discussion.enjoyable = "Discussions enjoyable",
+  mean.discussion.toxic = "Discussions toxic",
+  mean.discussion.constructive = "Discussions constructive"
+)
+
+summary_table$variable <- factor(summary_table$variable,
+  levels = names(variable_labels), labels = variable_labels)
+
+profiles <- ggplot(summary_table, aes(x = group, y = mean, fill = group)) +
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, position = position_dodge(0.9)) +
+  facet_wrap(~variable, scales = "free_y", ncol = 3) +  # Use facet_wrap with variable
+  labs(title = "Profiles of three user groups", 
+    x = "",
+    y = "Mean Values by Group with 95% Confidence Intervals") +
+  theme_minimal() +
+  theme(legend.position = "bottom", axis.text.x=element_blank(),
+    strip.text = element_text(size = 10)) +
+  scale_fill_manual(values = c("#334c7f","#b2ccff","lightgrey"))
+
+profiles
+
+ggsave("../output/profiles_participation.pdf", profiles, width = 10, height = 6)
+
 ```
-
-
 
