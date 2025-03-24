@@ -94,7 +94,7 @@ se_est_mean <- summary(model_mean)$coefficients["mean_score_lag", "Std. Error"]
 lower_ci_mean <- coef_est_mean - 1.96 * se_est_mean
 upper_ci_mean <- coef_est_mean + 1.96 * se_est_mean
 
-coef_df_mean <- data.frame(term = "Mean Score (Lagged)",
+coef_df_mean <- data.frame(term = "Mean score (lagged)",
                            estimate = coef_est_mean,
                            lower = lower_ci_mean,
                            upper = upper_ci_mean)
@@ -104,8 +104,8 @@ coef_plot_mean <- ggplot(coef_df_mean, aes(x = term, y = estimate)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 1,color = "black") +
   labs(x = "",
-       y = "Next-Day Number of Comments",
-       title = "Social Feedback") +
+       y = "Number of next-day comments",
+       title = "Social feedback") +
   ylim(-0.05,0.22)+
   theme_bw(base_size = 13) +
   theme(axis.title.y = element_text(size = 10),
@@ -120,7 +120,7 @@ se_est_prop <- summary(model_prop_mean)$coefficients["mean_score_lag", "Std. Err
 lower_ci_prop <- coef_est_prop - 1.96 * se_est_prop
 upper_ci_prop <- coef_est_prop + 1.96 * se_est_prop
 
-coef_df_prop <- data.frame(term = "Mean Score (Lagged)",
+coef_df_prop <- data.frame(term = "Mean score (lagged)",
                            estimate = coef_est_prop,
                            lower = lower_ci_prop,
                            upper = upper_ci_prop)
@@ -130,7 +130,7 @@ coef_plot_prop <- ggplot(coef_df_prop, aes(x = term, y = estimate)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 1, color = "black") +
   labs(x = "",
-       y = "Propensity to Comment Again",
+       y = "Propensity to comment again",
        title = "") +
   theme_bw(base_size = 13) +
   ylim(-0.05,0.22)+
@@ -151,8 +151,8 @@ feedback_plot <- ggplot() +
   geom_point(data = lagged_data, 
              aes(x = mean_score_lag, y = next_day_comments),
              color = "#6699FF", alpha = 0.4, size = 1.5) +
-  labs(x = "Mean core received on previous comments (lagged)",
-       y = "Next-day number of comments",
+  labs(x = "Mean score received on previous comments (lagged)",
+       y = "Number of next-day comments",
        title = "") +
   annotate("text", x = 10, y = 22, label = "Start value of score (no votes) = 1")+
   theme_bw() +
@@ -206,14 +206,14 @@ cox_coef_plot <- ggplot(coef_df, aes(x = estimate, y = term, color = term)) +
   geom_point(size = 4) +
   geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0, size = 1) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  labs(x = "Cox Prop. Hazards Model Coefficient, 95%CIs", 
-       title = "Discussion Drop-out", y = "",
+  labs(x = "Cox prop. hazards model coefficient, 95% CIs", 
+       title = "Discussion drop-out", y = "",
        subtitle = "Survival analysis for participation") +
   scale_y_discrete(labels = c("conditionincentives" = "Incentives",
                               "conditionmoderation" = "Moderation",
                               "group_toxicity" = "Group \n Toxicity")) +
   scale_color_manual(values = c(
-    "conditionincentives" = "#29c195",
+    "conditionincentives" = "#C5701A",
     "conditionmoderation" = "#6699FF",
     "group_toxicity" = "black"
   )) +
@@ -242,16 +242,16 @@ surv_group_plot <- ggsurvplot(surv_fit,
   surv.median.line = "hv",
   pval = TRUE,
   pval.size = 3,
-  palette = c("grey","#29c195","#6699FF"), 
+  palette = c("grey","#C5701A","#6699FF"), 
   conf.int = TRUE,  
   #risk.table = TRUE,
   #              tables.height = 0.2,
   #              tables.theme = theme_cleantable(),
   legend.title = "Condition", 
   legend.labs = c("Control", "Incentives", "Moderation"), 
-  xlab = "Days of Discussion Phase",  
+  xlab = "Days of discussion phase",  
   xlim = c(1, 28) ,
-  ylab = "Probability for Continued Participation")
+  ylab = "Probability for continued participation")
 
 surv_group_plot
 
@@ -276,11 +276,11 @@ surv_tox_plot <- ggsurvplot(surv_fit,
   pval.size = 3,
   palette = c("black","grey"), 
   conf.int = TRUE,   
-  legend.title = "Group Toxicity", # Customize legend title
+  legend.title = "Group toxicity", # Customize legend title
   legend.labs = c("High", "Low"), 
-  xlab = "Days of Discussion Phase",  
+  xlab = "Days of discussion phase",  
   xlim = c(1, 28) ,
-  ylab = "Probability for Continued Participation")
+  ylab = "Probability for continued participation")
 
 surv_tox_plot
 

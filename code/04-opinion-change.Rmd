@@ -96,18 +96,21 @@ model_frames <- list()
 for (i in seq_along(models)) {
   model_frames[[i]] <- data.frame(
     Coefficient = summary(models[[i]])$coef[-1, 1],
-    SE = summary(models[[i]])$coef[-1, 2],        
+    SE = summary(models[[i]])$coef[-1, 2],  
     Variable = variables[i]                        
   )
 }
 
 combined_df <- do.call(rbind, model_frames)
-combined_df <- combined_df%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+
+combined_df$Variable <- factor(combined_df$Variable, levels = rev(c(
+  "Affective polarization", "Political cynicism", "Political efficiacy", "Political orientation",
+  "Political interest", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others")))
 
 interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
 
-prepost_plot <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), colour = "black",
@@ -116,7 +119,7 @@ prepost_plot <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Political variables")+
   xlab("")+
-  ylab("Before vs. after Discussion")+
+  ylab("Before vs. after discussion")+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
@@ -183,12 +186,16 @@ combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
   filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))%>%
   mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
+
+combined_df$Variable <- factor(combined_df$Variable, levels = rev(c(
+  "Affective polarization", "Political cynicism", "Political efficiacy", "Political orientation",
+  "Political interest", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others")))
 
 interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
 
-prepost_plot <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) + 
+prepost_plot <- ggplot(combined_df, aes(x = Variable, group = Condition)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2, color = Condition), 
@@ -197,8 +204,8 @@ prepost_plot <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) +
   coord_flip()+
   ggtitle("Political variables by condition")+
   xlab("")+
-  ylab("Before vs. After Discussion") +
-  scale_color_manual(values = c("#29c195","#6699FF"))+
+  ylab("Before vs. after discussion") +
+  scale_color_manual(values = c("#C5701A","#6699FF"))+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.position = "top")
@@ -235,12 +242,11 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
   
 interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
 
-prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot1 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2),color = "#6699FF",  
@@ -281,12 +287,11 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
   
 interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
 
-prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot2 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2),color = "#6699FF",  
@@ -295,7 +300,7 @@ prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Number of comments")+
   xlab("")+
-  ylab("Before vs. After Discussion") +
+  ylab("Before vs. after discussion") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
@@ -338,11 +343,10 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
   
 
-prepost_plot1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot1 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2),color = "#6699FF",  
@@ -383,10 +387,9 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
 
-prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot2 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2),color = "#6699FF",  
@@ -395,7 +398,7 @@ prepost_plot2 <- ggplot(combined_df, aes(x = rev(Variable))) +
   coord_flip()+
   ggtitle("Change by activity", subtitle = "Number of comments (control only)")+
   xlab("")+
-  ylab("Before vs. After Discussion") +
+  ylab("Before vs. after discussion") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
@@ -455,10 +458,9 @@ for (i in seq_along(models)) {
 
 combined_df <- do.call(rbind, model_frames)
 combined_df <- cbind(combined_df,directions)
-combined_df <- combined_df%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
 
-prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable))) + 
+
+prepost_plot_issues <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), colour = "#6699FF",
@@ -518,19 +520,21 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)%>%
   rownames_to_column()%>%
   filter(str_detect(rowname, "time2:"))
-combined_df <- cbind(combined_df,directions)%>%
-  mutate(Variable = fct_inorder(rev(Variable)))%>%
+
+doubled_directions <- rep(as.character(directions), each = 2)
+
+combined_df <- cbind(combined_df,doubled_directions)%>%
   mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
 
-prepost_plot_issues <- ggplot(combined_df, aes(x = rev(Variable), group = Condition)) + 
+prepost_plot_issues <- ggplot(combined_df, aes(x = Variable, group = Condition)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2, color = Condition), 
                   lwd = 1, position = position_dodge(width = 2/3)) + 
   theme_bw(base_size=13)+ 
-  facet_grid(. ~ directions)+
+  facet_grid(. ~ doubled_directions)+
   coord_flip()+
-  scale_color_manual(values = c("#29c195","#6699FF"))+ 
+  scale_color_manual(values = c("#C5701A","#6699FF"))+ 
   ggtitle("Change in issue attitudes by condition")+
   xlab("")+
   ylab("Partial pooling, participant and group random intercepts")+
@@ -583,10 +587,9 @@ for (i in seq_along(models)) {
 
 combined_df <- do.call(rbind, model_frames)%>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
 
-prepost_plot_issues1 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot_issues1 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), color = "#6699FF",
@@ -637,10 +640,9 @@ for (i in seq_along(models)) {
 
 combined_df <- do.call(rbind, model_frames)%>%
   rownames_to_column()%>%
-  filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+  filter(str_detect(rowname, "time2:"))
 
-prepost_plot_issues2 <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot_issues2 <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), color = "#6699FF",
@@ -701,10 +703,9 @@ for (i in seq_along(models)) {
 }
 
 combined_df <- do.call(rbind, model_frames)
-combined_df <- combined_df%>%
-  mutate(Variable = fct_inorder(rev(Variable)))
+combined_df <- combined_df
 
-prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable))) + 
+prepost_plot_knowledge <- ggplot(combined_df, aes(x = Variable)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), colour = "#6699FF",
@@ -771,20 +772,19 @@ combined_df <- do.call(rbind, model_frames)
 combined_df <- combined_df %>%
   rownames_to_column()%>%
   filter(str_detect(rowname, "time2:"))%>%
-  mutate(Variable = fct_inorder(rev(Variable)))%>%
   mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
 
-prepost_plot_knowledge <- ggplot(combined_df, aes(x = rev(Variable), group = Condition, color = Condition)) + 
+prepost_plot_knowledge <- ggplot(combined_df, aes(x = Variable, group = Condition, color = Condition)) + 
   geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), 
                   lwd = 1, position = position_dodge(width = 2/3)) + 
   theme_bw(base_size=13)+ 
   coord_flip()+
-  ggtitle("Issue Knowledge Change by Condition")+
+  ggtitle("Issue knowledge change by condition")+
   xlab("")+
-  ylab("Pre vs. Post Comparison") +
-  scale_color_manual(values = c("#29c195","#6699FF"))+
+  ylab("Pre vs. post comparison") +
+  scale_color_manual(values = c("#C5701A","#6699FF"))+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
@@ -874,10 +874,9 @@ tidy_minwage <- broom.mixed::tidy(minwage_mod, effects = "fixed") %>% mutate(mod
 tidy_migration <- broom.mixed::tidy(migration_mod, effects = "fixed") %>% mutate(model = "Immigration")
 
 combined_tidy <- bind_rows(tidy_gender, tidy_mideast, tidy_climate, tidy_minwage, tidy_migration)%>%
-  filter(term != "(Intercept)")%>%
-  mutate(term = fct_inorder(rev(term)))
+  filter(term != "(Intercept)")
   
-issue_mod_plot <- ggplot(combined_tidy, aes(x = estimate, y = rev(term), color = model)) +
+issue_mod_plot <- ggplot(combined_tidy, aes(x = estimate, y = term, color = model)) +
   geom_point(size = 2,position = position_dodge(0.5)) +
   geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error), 
                  height = 0, position = position_dodge(0.5)) +
@@ -981,7 +980,7 @@ ioc_migration <- ggplot() +
   #guides(color = "none")+
   theme_bw()+
   facet_wrap(. ~ subreddit, ncol = 1)+
-  ggtitle("Individual Migration Attitude Trajectories", subtitle = "Agreement with: \"Immigration should be regulated more strictly.\"")+
+  ggtitle("Individual migration attitude trajectories", subtitle = "Agreement with: \"Immigration should be regulated more strictly.\"")+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
@@ -1065,7 +1064,7 @@ ioc_gender <- ggplot() +
   #guides(color = "none")+
   theme_bw()+
   facet_wrap(. ~ subreddit, ncol = 1)+
-  ggtitle("Individual Gender Attitude Trajectories", subtitle = "Agreement with: \"Gender neutral language and pronouns are silly issues.\"")+
+  ggtitle("Individual gender attitude trajectories", subtitle = "Agreement with: \"Gender neutral language and pronouns are silly issues.\"")+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 

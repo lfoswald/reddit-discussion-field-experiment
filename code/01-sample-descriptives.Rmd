@@ -86,26 +86,27 @@ any_check <- post_surveys%>%
   slice(1)%>%
   pull(ParticipantID)
 
-sample%>% mutate(active = ifelse(is.na(comment_count),"no","yes"),
-         active = ifelse(!ParticipantID %in% any_check & active == "no", "join only", active))%>%count(active)
+sample%>% mutate(active = ifelse(is.na(comment_count),"silent","active"),
+         active = ifelse(!ParticipantID %in% any_check & active == "silent", "join only", active))%>%count(active)
 
 bars <- sample%>%
-  mutate(active = ifelse(is.na(comment_count),"no","yes"),
-         active = ifelse(!ParticipantID %in% any_check & active == "no", "join only", active))%>%
+  mutate(active = ifelse(is.na(comment_count),"silent","active"),
+         active = ifelse(!ParticipantID %in% any_check & active == "silent", "join only", active),
+         active = factor(active, levels = c("join only","silent","active")))%>%
   ggplot()+
-  geom_bar(aes(factor(active)), fill = c("darkgrey","lightgrey","#6699FF"))+
-  xlab("Wrote any comment")+
+  geom_bar(aes(active), fill = c("darkgrey","lightgrey","#6699FF"))+
+  xlab("Participation group")+
   ylab("")+
   annotate(geom = "text", x = "join only",   y = 85, label = "97")+
-  annotate(geom = "text", x = "no",   y = 80, label = "92")+
-  annotate(geom = "text", x = "yes",   y = 319, label = "331")+
+  annotate(geom = "text", x = "silent",   y = 80, label = "92")+
+  annotate(geom = "text", x = "active",   y = 319, label = "331")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
   
 histog <- ggplot(sample)+
   geom_bar(aes(comment_count), fill = "#6699FF")+
-  xlab("Comments written in experiment")+
+  xlab("Number of comments written in experiment")+
   ylab("Number of users")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -123,7 +124,7 @@ dots <- ggplot(sample)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
-combi2 <- grid.arrange(bars, histog, widths = c(3,4.5), top = "User level discussion participation")
+combi2 <- grid.arrange(bars, histog, widths = c(3,4.5), top = "User-level discussion participation")
 
 ggsave("../output/participation_dots.pdf", dots, width = 5, height = 4)
 ggsave("../output/participation_total2.pdf", combi2, width = 6, height = 3)
@@ -360,7 +361,7 @@ ggsave("../output/characteristics_combi.pdf", characteristics_combi, width = 14,
 comments_tox <- ggplot(sample,aes(x = comment_mean_tox, y = ex_comment_mean_tox, size = comment_count))+
   geom_point(alpha = 0.5, color = "#6699FF")+
   theme_bw()+
-  xlab("Exp. comment toxicity")+
+  xlab("Internal comment toxicity")+
   ylab("Average external comment toxicity")+
   guides(color = "none", size = "none")+
   geom_abline()+
@@ -373,7 +374,7 @@ comments_length <- ggplot(sample,aes(x = comment_mean_lenght, y = ex_comment_mea
                                      size = comment_count))+
   geom_point(alpha = 0.5, color = "#6699FF")+
   theme_bw()+
-  xlab("Exp. comment length")+
+  xlab("Internal comment length")+
   ylab("Average external comment length")+
   guides(color = "none", size = "none")+
   geom_abline()+
@@ -909,14 +910,14 @@ ggsave("../output/differences_perception.pdf", differences, width = 6 , height =
 ```
 
 
-## WS Addition: Relative change in commenting activity
+## Relative change in commenting activity
 
 ```{r}
 #colors
-colors <- c(control = "gray", incentives = "#29c195", moderation = "#6699FF")
+colors <- c(control = "gray", incentives = "#C5701A", moderation = "#6699FF")
 
 #adjust alphas to .7
-colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolor("#29c195", alpha.f = .7), moderation = adjustcolor("#6699FF", alpha.f = .7))
+colors <- c(control = adjustcolor("gray", alpha.f = .7), incentives = adjustcolor("#C5701A", alpha.f = .7), moderation = adjustcolor("#6699FF", alpha.f = .7))
 
 comment_data_ranges <- daily_summary_act %>% group_by(ParticipantID) %>% dplyr::summarize(earliest_comment = min(created_comment), latest_comment = max(created_comment))
 
