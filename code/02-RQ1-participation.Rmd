@@ -25,6 +25,9 @@ library(tableone)
 library(pscl)
 library(ggcorrplot)
 library(kableExtra)
+library(lme4)
+library(forcats)
+library(glmmTMB)
 ```
 
 Import data (no comment texts, open comments, usernames or email addresses)
@@ -99,7 +102,7 @@ scaled_sample <- full_data%>%
   select(ParticipantID, condition, subreddit_w1, comment_count, comment_mean_tox,comment_mean_score,
          ex_comment_mean_score, 
          active, active2, gender, age, education, comments_online_w1,  group_toxicity,
-         leftright_w1, polinterest_w1, affective_polarization_w1, 
+         leftright_w1, polinterest_w1, affective_polarization_w1, ex_comment_mean_tox,
          affective_pol_1_w1,affective_pol_2_w1,comment_karma,
          pol_cynicism_w1, efficacy_w1, trust_general_1_w1,
          trust_general_2_w1,trust_general_3_w1,trust_general_4_w1,
@@ -148,7 +151,8 @@ models <- list(
   hurdle(comment_count ~ mean_discussion_enjoyable, data = present_sample),
   hurdle(comment_count ~ mean_discussion_constructive, data = present_sample),
   hurdle(comment_count ~ mean_discussion_toxic, data = present_sample),
-  hurdle(comment_count ~ group_toxicity, data = present_sample)
+  hurdle(comment_count ~ mean_discussion_toxic + group_toxicity, data = present_sample)
+  #hurdle(comment_count ~ group_toxicity, data = present_sample) #"Average group toxicity"
 )
 
 predictors <- c(
@@ -156,8 +160,9 @@ predictors <- c(
   "Political interest", "Affective polarization", "Trust in politics","Trust in media",
   "Trust in science", "Trust in others", "Issue distance",
   "Group respectful", "Group knowledgeable", "Group polarized",
-  "Discussion enjoyable",  "Discussion constructive","Discussion toxic",
-   "Average group toxicity")
+  "Discussion enjoyable",  "Discussion constructive","Discussion toxic", "Discussion toxic contr.",
+  "Write toxic external"
+   )
 
 model_frames <- list()
 
@@ -181,7 +186,8 @@ for (i in seq_along(models)) {
   model_frames[[i]] <- rbind(zero_hurdle_coef, count_model_coef)
 }
 
-combined_df <- do.call(rbind, model_frames)
+combined_df <- do.call(rbind, model_frames)%>%
+  filter(!row.names(.) %in% c("group_toxicity","group_toxicity1"))
 
 combined_df <- combined_df %>%
   mutate(Predictor = fct_inorder(rev(Predictor))) %>%
@@ -197,6 +203,7 @@ comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor
                       ymax = Coefficient + SE * interval2), colour = "black",
                   lwd = 1, position = position_dodge(width = 2 / 3)) + 
   guides(alpha = "none") +
+  geom_vline(xintercept=8.5)+
   theme_bw(base_size = 10) + 
   coord_flip() +
   ggtitle("Prediction of user-level discussion participation") +
@@ -211,6 +218,24 @@ ggsave("../output/comment_plot_pred_hurdle_with_external.pdf", comment_plot_pred
 
 comment_plot_pred_active_hurdle_ext
 ```
+
+
+### Random effects with glmmTMB
+```{r}
+
+glmmTMB(comment_count ~ gender_male + (1 + gender_male | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ age + (1 + age | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ education + (1 + education | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ comments_online_w1 + (1 + comments_online_w1 | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ comment_karma + (1 + comment_karma | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ leftright_w1 + (1 + leftright_w1 | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ polinterest_w1 + (1 + polinterest_w1 | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ affective_polarization_w1 + (1 + affective_polarization_w1 | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ trust_general_1_w1 + (1 + trust_general_1_w1 | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+glmmTMB(comment_count ~ mean_discussion_toxic + group_toxicity + (1 + mean_discussion_toxic | subreddit_w1), data = present_sample, family = hurdle_poisson(link = "log"))
+
+```
+
 
 ### Geometric distribution (instead of default poisson)
 ```{r}
@@ -435,6 +460,62 @@ comment_plot_pred_binary
 
 ggsave("../output/comment_plot_pred_binary.pdf",comment_plot_pred_binary, width = 4, height = 4)
 ```
+### Binary Active vs. Passive - Random Effects 
+```{r}
+predictors <- c("gender_male", "age", "education", "comments_online_w1", "comment_karma",
+                "leftright_w1", "polinterest_w1", "affective_polarization_w1", 
+                "trust_general_1_w1", "trust_general_2_w1", "trust_general_3_w1", 
+                "trust_general_4_w1", "mean_issue_distance_abs", "mean_group_respectful",
+                "mean_group_knowledgeable", "mean_group_polarized", 
+                "mean_discussion_enjoyable", "mean_discussion_toxic")
+
+models <- lapply(predictors, function(pred) {
+  formula <- as.formula(paste("active ~", pred, "+ (1 +", pred," | subreddit_w1)"))
+  glmer(formula, data = present_sample, family = binomial)
+})
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  # Extract fixed effects summary; skip the intercept (row 1)
+  coefs <- summary(models[[i]])$coefficients
+  
+  model_frames[[i]] <- data.frame(
+    Coefficient = coefs[-1, "Estimate"],   # exclude intercept
+    SE = coefs[-1, "Std. Error"],
+    pval = coefs[-1, "Pr(>|z|)"],
+    Predictor = predictors[i]
+  )
+}
+
+combined_df <- do.call(rbind, model_frames) %>%
+  mutate(Significance = ifelse(pval < 0.05, "sig.", "insig."),
+         Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Predictor) %>%
+  slice(1)  # slice(1) because we have only one predictor per model
+
+interval2 <- 1.96  # for 95% CI
+
+comment_plot_pred_binary_random <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  guides(alpha = "none")+
+  theme_bw(base_size=10)+ 
+  coord_flip()+
+  ggtitle("Comment activity binary", subtitle = "Excluding inactive users | subreddit random effects")+
+  xlab("")+
+  ylab("Change in log odds")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+comment_plot_pred_binary_random
+
+ggsave("../output/comment_plot_pred_binary_random.pdf", comment_plot_pred_binary_random, width = 6, height = 5)
+
+```
 
 ### Manual poisson models for count data (active only)
 ```{r}
@@ -496,6 +577,62 @@ comment_plot_pred_active <- ggplot(combined_df, aes(x = rev(Predictor), alpha = 
 comment_plot_pred_active
 
 ggsave("../output/comment_plot_pred_poisson.pdf", comment_plot_pred_active, width = 4, height = 4)
+```
+
+
+### Manual poisson models for count data (active only) - Random Effects 
+```{r}
+
+# Filter for active users
+present_sample <- scaled_sample %>% filter(active == 1)
+
+# Fit Poisson models with random effects
+models <- lapply(predictors, function(pred) {
+  formula <- as.formula(paste("comment_count ~", pred, "+ (1 +", pred," | subreddit_w1)"))
+  glmer(formula, data = present_sample, family = poisson(link = "log"))
+})
+
+# Extract model summaries
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  coefs <- summary(models[[i]])$coefficients
+  
+  model_frames[[i]] <- data.frame(
+    Coefficient = coefs[-1, "Estimate"],   # Exclude intercept
+    SE = coefs[-1, "Std. Error"],
+    pval = coefs[-1, "Pr(>|z|)"],
+    Predictor = predictors[i]
+  )
+}
+
+# Combine results
+combined_df <- do.call(rbind, model_frames) %>%
+  mutate(Predictor = fct_inorder(rev(Predictor)))
+
+# Define interval for confidence intervals
+interval2 <- 1.96  # 95% CI
+
+# Create the plot
+comment_plot_pred_active_random <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1 , position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Comment activity", subtitle = "Poisson prediction of comment count | subreddit random effects") +
+  xlab("") +
+  ylab("Change in log number of comments") +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+# Display and save the plot
+comment_plot_pred_active_random
+
+ggsave("../output/comment_plot_pred_poisson_random.pdf", comment_plot_pred_active_random, width = 6, height = 5)
+
 ```
 
 

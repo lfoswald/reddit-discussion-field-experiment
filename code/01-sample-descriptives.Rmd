@@ -309,7 +309,11 @@ activity_combi <- grid.arrange(views, comments, comments_views, nrow=1, widths =
 
 ggsave("../output/comments_views.pdf", activity_combi, width = 14, height = 5)
 
+ggsave("../output/comments_views_larger.pdf", activity_combi, width = 12, height = 4)
+
 ```
+
+
 ```{r, fig.height=4, fig.width=12}
 toxicity <- ggplot(discussion_data, aes(x = date(created_post), y = comment_toxicity, color = subreddit))+
   geom_smooth(method = loess,alpha=0.1)+
@@ -355,6 +359,32 @@ characteristics_combi <- grid.arrange(toxicity, length, score, nrow=1, widths = 
 ggsave("../output/characteristics_combi.pdf", characteristics_combi, width = 14, height = 5)
 
 ```
+### Relationship Comments, Views, Toxicity 
+```{r, fig.height=3}
+### Relationship Comments, Views, Toxicity 
+# model 
+model <- lm(`Collected comments` ~ comment_toxicity * total_views, data = discussion_data)
+
+summary(model)
+
+
+relationship_plot <- ggplot(discussion_data, aes(x = total_views, y = `Collected comments`, colour = comment_toxicity)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", aes(fill = comment_toxicity), se = TRUE, alpha = 0.2) +
+  theme_bw(base_size = 15) +
+  labs(x = "Total Views",
+    y = "Number of comments",
+    colour = "Comment Toxicity",
+    fill = "Comment Toxicity",
+    title = "Relationship between Comments, Views, and Toxicity") +
+  theme(legend.position = "right",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
+
+relationship_plot
+
+```
+
 
 ### Reddit activity by users - internal vs. external
 ```{r, fig.width=12, fig.height=5}
@@ -386,8 +416,17 @@ cor.test(sample$comment_mean_lenght,sample$ex_comment_mean_lenght)
 cor.test(log(sample$comment_karma),sample$comment_count)
 
 comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 1)
-ggsave("../output/comment_tox_length_narrow.pdf", comment_tox_length, width = 5 , height = 3)
+ggsave("../output/comment_tox_length_narrow.pdf", comment_tox_length, width = 6 , height = 3)
 ```
+
+## Interaction Models 
+```{r}
+summary(lm(comment_count ~ condition * comment_karma, data = sample))
+
+summary(lm(comment_mean_tox ~ condition * ex_comment_mean_tox, data = sample))
+
+```
+
 
 ## Comment karma and platform seniority
 ```{r, fig.width=12, fig.height=5}
