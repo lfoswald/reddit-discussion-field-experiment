@@ -417,6 +417,9 @@ cor.test(log(sample$comment_karma),sample$comment_count)
 
 comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 1)
 ggsave("../output/comment_tox_length_narrow.pdf", comment_tox_length, width = 6 , height = 3)
+
+comment_tox_length <- grid.arrange(comments_tox, comments_length, nrow = 2)
+ggsave("../output/comment_tox_length_long.pdf", comment_tox_length, width = 3 , height = 6)
 ```
 
 ## Interaction Models 

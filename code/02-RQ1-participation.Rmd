@@ -467,7 +467,15 @@ predictors <- c("gender_male", "age", "education", "comments_online_w1", "commen
                 "trust_general_1_w1", "trust_general_2_w1", "trust_general_3_w1", 
                 "trust_general_4_w1", "mean_issue_distance_abs", "mean_group_respectful",
                 "mean_group_knowledgeable", "mean_group_polarized", 
-                "mean_discussion_enjoyable", "mean_discussion_toxic")
+                "mean_discussion_enjoyable","mean_discussion_constructive", "mean_discussion_toxic")
+
+predictor_labels <- c(
+  "Gender (male)", "Age", "Education", "Commenting online", "Comment karma", "Political orientation",
+  "Political interest", "Affective polarization", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others", "Issue distance",
+  "Group respectful", "Group knowledgeable", "Group polarized",
+  "Discussion enjoyable",  "Discussion constructive","Discussion toxic"
+   )
 
 models <- lapply(predictors, function(pred) {
   formula <- as.formula(paste("active ~", pred, "+ (1 +", pred," | subreddit_w1)"))
@@ -484,7 +492,7 @@ for (i in seq_along(models)) {
     Coefficient = coefs[-1, "Estimate"],   # exclude intercept
     SE = coefs[-1, "Std. Error"],
     pval = coefs[-1, "Pr(>|z|)"],
-    Predictor = predictors[i]
+    Predictor = predictor_labels[i]
   )
 }
 
@@ -501,10 +509,11 @@ comment_plot_pred_binary_random <- ggplot(combined_df, aes(x = rev(Predictor), a
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
                       ymax = Coefficient + SE*interval2), colour = "black",
                   lwd = 1, position = position_dodge(width = 2/3)) + 
+  geom_vline(xintercept = 7.5)+
   guides(alpha = "none")+
   theme_bw(base_size=10)+ 
   coord_flip()+
-  ggtitle("Comment activity binary", subtitle = "Excluding inactive users | subreddit random effects")+
+  ggtitle("Zero model | silent vs. active", subtitle = "Excluding join-only users, community random effects")+
   xlab("")+
   ylab("Change in log odds")+
   theme(#panel.grid.major = element_blank(),
@@ -513,7 +522,7 @@ comment_plot_pred_binary_random <- ggplot(combined_df, aes(x = rev(Predictor), a
 
 comment_plot_pred_binary_random
 
-ggsave("../output/comment_plot_pred_binary_random.pdf", comment_plot_pred_binary_random, width = 6, height = 5)
+ggsave("../output/comment_plot_pred_binary_random.pdf", comment_plot_pred_binary_random, width = 5, height = 5)
 
 ```
 
@@ -602,7 +611,7 @@ for (i in seq_along(models)) {
     Coefficient = coefs[-1, "Estimate"],   # Exclude intercept
     SE = coefs[-1, "Std. Error"],
     pval = coefs[-1, "Pr(>|z|)"],
-    Predictor = predictors[i]
+    Predictor = predictor_labels[i]
   )
 }
 
@@ -616,13 +625,14 @@ interval2 <- 1.96  # 95% CI
 # Create the plot
 comment_plot_pred_active_random <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
   geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_vline(xintercept = 7.5)+
   geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
                       ymax = Coefficient + SE * interval2), colour = "black",
                   lwd = 1 , position = position_dodge(width = 2 / 3)) + 
   guides(alpha = "none") +
   theme_bw(base_size = 10) + 
   coord_flip() +
-  ggtitle("Comment activity", subtitle = "Poisson prediction of comment count | subreddit random effects") +
+  ggtitle("Count model | comment activity", subtitle = "Poisson model | subreddit random effects") +
   xlab("") +
   ylab("Change in log number of comments") +
   theme(panel.grid.major.x = element_blank(),
@@ -631,7 +641,7 @@ comment_plot_pred_active_random <- ggplot(combined_df, aes(x = rev(Predictor), a
 # Display and save the plot
 comment_plot_pred_active_random
 
-ggsave("../output/comment_plot_pred_poisson_random.pdf", comment_plot_pred_active_random, width = 6, height = 5)
+ggsave("../output/comment_plot_pred_poisson_random.pdf", comment_plot_pred_active_random, width = 5, height = 5)
 
 ```
 
