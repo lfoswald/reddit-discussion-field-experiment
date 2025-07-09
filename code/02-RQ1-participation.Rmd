@@ -151,18 +151,17 @@ models <- list(
   hurdle(comment_count ~ mean_discussion_enjoyable, data = present_sample),
   hurdle(comment_count ~ mean_discussion_constructive, data = present_sample),
   hurdle(comment_count ~ mean_discussion_toxic, data = present_sample),
-  hurdle(comment_count ~ mean_discussion_toxic + group_toxicity, data = present_sample)
-  #hurdle(comment_count ~ group_toxicity, data = present_sample) #"Average group toxicity"
-)
+  hurdle(comment_count ~ mean_discussion_toxic + group_toxicity, data = present_sample),
+  hurdle(comment_count ~ group_toxicity, data = present_sample)
+  #hurdle(comment_count ~ mean_discussion_toxic * group_toxicity, data = present_sample)
+  )
 
 predictors <- c(
   "Gender (male)", "Age", "Education", "Commenting online", "Comment karma", "Political orientation",
   "Political interest", "Affective polarization", "Trust in politics","Trust in media",
   "Trust in science", "Trust in others", "Issue distance",
   "Group respectful", "Group knowledgeable", "Group polarized",
-  "Discussion enjoyable",  "Discussion constructive","Discussion toxic", "Discussion toxic contr.",
-  "Write toxic external"
-   )
+  "Discussion enjoyable",  "Discussion constructive","Discussion toxic", "Subjective toxicity", "Objective toxicity")
 
 model_frames <- list()
 
@@ -203,7 +202,7 @@ comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor
                       ymax = Coefficient + SE * interval2), colour = "black",
                   lwd = 1, position = position_dodge(width = 2 / 3)) + 
   guides(alpha = "none") +
-  geom_vline(xintercept=8.5)+
+  geom_vline(xintercept=9.5)+
   theme_bw(base_size = 10) + 
   coord_flip() +
   ggtitle("Prediction of user-level discussion participation") +
@@ -217,6 +216,10 @@ comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor
 ggsave("../output/comment_plot_pred_hurdle_with_external.pdf", comment_plot_pred_active_hurdle_ext, width = 6, height = 4)
 
 comment_plot_pred_active_hurdle_ext
+
+# Interaction between objective toxicity and toxicity perceptions for participation
+summary(hurdle(comment_count ~  mean_discussion_toxic*group_toxicity, data = present_sample))
+
 ```
 
 
