@@ -188,7 +188,38 @@ for (i in seq_along(models)) {
 combined_df <- do.call(rbind, model_frames)%>%
   filter(!row.names(.) %in% c("group_toxicity","group_toxicity1"))
 
+combined_df_1 <- combined_df%>%
+  filter(Predictor %in% c("Gender (male)", "Age", "Education", "Commenting online", "Comment karma", "Political orientation",
+  "Political interest", "Affective polarization", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others"))
+
+combined_df_2 <- combined_df%>%
+  filter(Predictor %in% c("Issue distance",
+  "Group respectful", "Group knowledgeable", "Group polarized",
+  "Discussion enjoyable",  "Discussion constructive","Discussion toxic"))
+
+combined_df_3 <- combined_df %>%
+  filter(Predictor %in% c("Subjective toxicity", "Objective toxicity"))
+
 combined_df <- combined_df %>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+combined_df_1 <- combined_df_1 %>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+combined_df_2 <- combined_df_2 %>%
+  mutate(Predictor = fct_inorder(rev(Predictor))) %>%
+  group_by(Model) %>%
+  mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
+  ungroup()
+
+combined_df_3 <- combined_df_3 %>%
   mutate(Predictor = fct_inorder(rev(Predictor))) %>%
   group_by(Model) %>%
   mutate(AlphaValue = abs(Coefficient) / max(abs(Coefficient), na.rm = TRUE)) %>%
@@ -216,6 +247,115 @@ comment_plot_pred_active_hurdle_ext <- ggplot(combined_df, aes(x = rev(Predictor
 ggsave("../output/comment_plot_pred_hurdle_with_external.pdf", comment_plot_pred_active_hurdle_ext, width = 6, height = 4)
 
 comment_plot_pred_active_hurdle_ext
+
+### nicer graph 
+
+# keep scales consistent
+extents <- combined_df %>%
+  group_by(Model) %>%
+  summarise(
+    lo = min(Coefficient - SE * interval2),
+    hi = max(Coefficient + SE * interval2))
+
+add_global_scales_1 <- function(p, extents) {
+  p +geom_blank(data = extents,
+               aes(x = rev("Age")[1], y = lo),
+               inherit.aes = FALSE) +
+    geom_blank(data = extents,
+               aes(x = rev("Age")[1], y = hi),
+               inherit.aes = FALSE)
+}
+
+add_global_scales_2 <- function(p, extents) {
+  p +geom_blank(data = extents,
+               aes(x = rev("Discussion toxic")[1], y = lo),
+               inherit.aes = FALSE) +
+    geom_blank(data = extents,
+               aes(x = rev("Discussion toxic")[1], y = hi),
+               inherit.aes = FALSE)
+}
+
+add_global_scales_3 <- function(p, extents) {
+  p +geom_blank(data = extents,
+               aes(x = rev("Objective toxicity")[1], y = lo),
+               inherit.aes = FALSE) +
+    geom_blank(data = extents,
+               aes(x = rev("Objective toxicity")[1], y = hi),
+               inherit.aes = FALSE)
+}
+
+comment_plot_pred_active_hurdle_ext_1 <- ggplot(combined_df_1, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Prediction of user-level discussion participation",
+          subtitle = "Pre-treatment variables") +
+  xlab("") +
+  ylab(NULL) +
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+p1_consistent <- add_global_scales_1(comment_plot_pred_active_hurdle_ext_1, extents)+
+  theme(strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.spacing     = unit(0.2, "lines")) +
+  theme(plot.margin = margin(t = 5, r = 5, b = 5, l = 10))
+
+comment_plot_pred_active_hurdle_ext_2 <- ggplot(combined_df_2, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle(NULL, subtitle = "Discussion phase perceptions") +
+  xlab("") +
+  ylab(NULL) +
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+p2_consistent <- add_global_scales_2(comment_plot_pred_active_hurdle_ext_2, extents)+
+  theme(strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.spacing     = unit(0.2, "lines")) +
+  theme(plot.margin = margin(t = 5, r = 5, b = 5, l = 0))
+
+comment_plot_pred_active_hurdle_ext_3 <- ggplot(combined_df_3, aes(x = rev(Predictor), alpha = abs(AlphaValue))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1, position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle(NULL, subtitle = "Toxicity measures") +
+  xlab("") +
+  ylab("Zero hurdle models for count data regression") +
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+
+p3_consistent <- add_global_scales_3(comment_plot_pred_active_hurdle_ext_3, extents)+
+  theme(strip.background = element_blank(),
+    strip.text       = element_blank(),
+    panel.spacing     = unit(0.2, "lines")) +
+  theme(plot.margin = margin(t = 5, r = 5, b = 5, l = 20))
+
+combi_hurdle <- grid.arrange(p1_consistent,p2_consistent,p3_consistent,
+             nrow = 3, heights = c(5,3,1.7))
+
+ggsave("../output/comment_plot_pred_hurdle_with_external_new.pdf", combi_hurdle, width = 6, height = 6)
+
 
 # Interaction between objective toxicity and toxicity perceptions for participation
 summary(hurdle(comment_count ~  mean_discussion_toxic*group_toxicity, data = present_sample))
@@ -1276,4 +1416,52 @@ profiles
 ggsave("../output/profiles_participation.pdf", profiles, width = 10, height = 6)
 
 ```
+
+### Individual-level predictors of attrition 
+
+```{r}
+table(scaled_sample$active2)
+scaled_sample$active3 <- ifelse(scaled_sample$active2 == "inactive", 1, 0)
+table(scaled_sample$active3)
+
+m_attrition <- glm(active3 ~ condition + age + gender_male + education +
+    comments_online_w1 + comment_karma + leftright_w1 +
+    polinterest_w1 + affective_polarization_w1, 
+    data = scaled_sample, family = "binomial")
+
+tbl <- broom::tidy(m_attrition) %>%
+  filter(term != "(Intercept)") %>%
+  mutate( Predictor = recode(term,
+      conditionincentives        = "Condition: incentives",
+      conditionmoderation        = "Condition: moderation",
+      age                         = "Age",
+      gender_male1                = "Gender (male)",
+      education                   = "Education",
+      comments_online_w1          = "Comments online (W1)",
+      comment_karma               = "Comment karma",
+      leftright_w1                = "Left–Right (W1)",
+      polinterest_w1              = "Political interest (W1)",
+      affective_polarization_w1   = "Affective polarization (W1)"),
+    Estimate = round(estimate, 3),
+    `Std. Error` = round(std.error, 3),
+    `z value`    = round(statistic, 2),
+    `Pr(>|z|)`   = ifelse(p.value < .001, "<0.001", round(p.value, 3))) %>%
+  select(Predictor, Estimate, `Std. Error`, `z value`, `Pr(>|z|)`)
+
+
+latex_table <- tbl %>%
+  kable(
+    format        = "latex",
+    booktabs      = TRUE,
+    caption       = "Individual‐Level Predictors of Attrition After Subreddit Admission",
+    label         = "tab:attrition",
+    col.names     = c("Predictor", "Estimate", "Std. Error", "$z$ value", "$p$"),
+    align         = c("l", "r", "r", "r", "r"),
+    escape        = FALSE
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
+
+```
+
+
 
