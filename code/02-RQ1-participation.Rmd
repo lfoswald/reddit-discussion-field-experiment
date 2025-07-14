@@ -170,14 +170,14 @@ for (i in seq_along(models)) {
   
   count_model_coef <- as.data.frame(model_summary$coefficients$count)
   count_model_coef$Predictor <- predictors[i]
-  count_model_coef$Model <- "Count Model"
+  count_model_coef$Model <- "Count Models"
   count_model_coef <- count_model_coef %>%
     filter(row.names(.) != "(Intercept)") %>%
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
   
   zero_hurdle_coef <- as.data.frame(model_summary$coefficients$zero)
   zero_hurdle_coef$Predictor <- predictors[i]
-  zero_hurdle_coef$Model <- "Zero Hurdle Model"
+  zero_hurdle_coef$Model <- "Zero Hurdle Models"
   zero_hurdle_coef <- zero_hurdle_coef %>%
     filter(row.names(.) != "(Intercept)") %>%
     rename(Coefficient = Estimate, SE = `Std. Error`, pval = `Pr(>|z|)`)
@@ -339,15 +339,16 @@ comment_plot_pred_active_hurdle_ext_3 <- ggplot(combined_df_3, aes(x = rev(Predi
   coord_flip() +
   ggtitle(NULL, subtitle = "Toxicity measures") +
   xlab("") +
-  ylab("Zero hurdle models for count data regression") +
-  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x")+
+  ylab(NULL) +
+  facet_wrap(~ forcats::fct_rev(Model), ncol = 2, scales = "free_x", strip.position = "bottom")+
   theme(#panel.grid.major = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor = element_blank())  
 
 p3_consistent <- add_global_scales_3(comment_plot_pred_active_hurdle_ext_3, extents)+
   theme(strip.background = element_blank(),
-    strip.text       = element_blank(),
+    strip.text       = element_text(face = "bold"),
+    strip.placement = "outside",
     panel.spacing     = unit(0.2, "lines")) +
   theme(plot.margin = margin(t = 5, r = 5, b = 5, l = 20))
 
@@ -1452,14 +1453,22 @@ tbl <- broom::tidy(m_attrition) %>%
 latex_table <- tbl %>%
   kable(
     format        = "latex",
-    booktabs      = TRUE,
+    booktabs      = FALSE,
     caption       = "Individual‐Level Predictors of Attrition After Subreddit Admission",
     label         = "tab:attrition",
     col.names     = c("Predictor", "Estimate", "Std. Error", "$z$ value", "$p$"),
     align         = c("l", "r", "r", "r", "r"),
     escape        = FALSE
   ) %>%
-  kable_styling(latex_options = c("hold_position", "striped"))
+  kable_styling(latex_options = c("hold_position"))
+
+tbl %>%
+  kable(
+    format        = "html",
+    booktabs      = FALSE,
+    caption       = "Individual‐Level Predictors of Attrition After Subreddit Admission",
+    col.names     = c("Predictor", "Estimate", "Std. Error", "$z$ value", "$p$"),
+  ) 
 
 ```
 
