@@ -127,7 +127,7 @@ dots <- ggplot(sample)+
 combi2 <- grid.arrange(bars, histog, widths = c(3,4.5), top = "User-level discussion participation")
 
 ggsave("../output/participation_dots.pdf", dots, width = 5, height = 4)
-ggsave("../output/participation_total2.pdf", combi2, width = 6, height = 3)
+ggsave("../output/participation_total2.pdf", combi2, width = 6, height = 2.5)
 ```
 
 
