@@ -1,6 +1,8 @@
 # Reddit Political Discussion Field Experiment
 
-This repository contains replication materials for the political discussion field experiment, fielded in summer 2024 (see also associated [OSF project](https://osf.io/m8g4x/)).
+This repository contains replication materials for the political discussion field experiment, fielded in summer 2024 (see also associated [OSF project](https://osf.io/m8g4x/)). The project was funded by the EU Horizon Project [SoMe4Dem](https://some4dem.eu/) by the European Commission.
+
+Based on data from this project, Veronika Batzdorfer and Sven Banisch developed an [interactive data exporer](https://reddit-field-explorer.streamlit.app/).
 
 The repository is structured as follows:
 
