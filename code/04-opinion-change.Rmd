@@ -15,6 +15,7 @@ library(readr)
 library(lme4)
 library(gridExtra)
 library(modelsummary)
+library(simr)
 ```
 
 Import data
@@ -214,6 +215,179 @@ prepost_plot
 
 ggsave("../output/prepost_plot_condition.pdf", prepost_plot, width = 5, height = 5)
 ```
+
+## Political Variable Change between Conditions | Alternative RE specification
+```{r}
+models <- list(
+    lmer(affective_polarization ~ time * condition  + (1 + condition | subreddit) + (1 | ParticipantID), data=prepost_data),
+    lmer(pol_cynicism ~ time * condition +  (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(efficacy ~ time * condition + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(leftright ~ time * condition + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(polinterest ~ time * condition + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(trust_general_1 ~ time * condition  + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(trust_general_2 ~ time * condition  + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(trust_general_3 ~ time * condition  + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data),
+    lmer(trust_general_4 ~ time * condition  + (1 + condition | subreddit)+ (1 | ParticipantID), data=prepost_data)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_frames[[i]] <- data.frame(
+    Coefficient = summary(models[[i]])$coef[-1, 1], 
+    SE = summary(models[[i]])$coef[-1, 2],          
+    Variable = variables[i]                        
+  )
+}
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  rownames_to_column()%>%
+  filter(str_detect(rowname, "time2:"))%>%
+  mutate(Condition = ifelse(str_detect(rowname, "moderation"), "moderation", "incentives"))
+
+combined_df$Variable <- factor(combined_df$Variable, levels = rev(c(
+  "Affective polarization", "Political cynicism", "Political efficiacy", "Political orientation",
+  "Political interest", "Trust in politics","Trust in media",
+  "Trust in science", "Trust in others")))
+
+interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+
+prepost_plot_random <- ggplot(combined_df, aes(x = Variable, group = Condition)) + 
+  geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE*interval2,
+                      ymax = Coefficient + SE*interval2, color = Condition), 
+                  lwd = 1, position = position_dodge(width = 2/3)) + 
+  theme_bw(base_size=13)+ 
+  coord_flip()+
+  ggtitle("Political variables by condition")+
+  xlab("")+
+  ylab("Before vs. after discussion") +
+  scale_color_manual(values = c("#C5701A","#6699FF"))+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "top")
+
+prepost_plot_random
+
+ggsave("../output/prepost_plot_condition_random.pdf", prepost_plot_random, width = 5, height = 5)
+```
+
+
+
+```{}
+model1 <- lmer(pol_cynicism ~ time * condition + (1 | subreddit) + (1 | ParticipantID), data=prepost_data)
+
+summary(model1)
+VarCorr(model1)
+
+model1_sim <- model1
+prepost_data$obs <- 1:nrow(prepost_data)
+
+fixef(model1_sim)["time2:conditionincentives"] <- 0.1
+model1_sim_extended <- extend(model1_sim, along="obs", n=2*nrow(prepost_data))
+power_curve <- powerCurve(model1_sim_extended, 
+                          fixed("time2:conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=200)
+
+pc_df <- as.data.frame(summary(power_curve))
+pa <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Cynicism Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.1",
+    x = "Number of Participants",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+fixef(model1_sim)["time2:conditionincentives"] <- 0.3
+model1_sim_extended <- extend(model1_sim, along="obs", n=2*nrow(prepost_data))
+power_curve <- powerCurve(model1_sim_extended, 
+                          fixed("time2:conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=200)
+
+pc_df <- as.data.frame(summary(power_curve))
+pb <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Cynicism Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.3",
+    x = "Number of Participants",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+p <- grid.arrange(pa, pb, nrow = 1)
+ggsave("../output/power_curves_cynicism_fixed.pdf", p, width=12, height=5)
+```
+
+
+
+```{r, include = F, eval = F}
+model2 <- lmer(pol_cynicism ~ time * condition + (1 + condition | subreddit) + (1 | ParticipantID), data=prepost_data)
+
+summary(model2)
+VarCorr(model2)
+
+model1_sim <- model2
+prepost_data$obs <- 1:nrow(prepost_data)
+
+fixef(model1_sim)["time2:conditionincentives"] <- 0.1
+model1_sim_extended <- extend(model1_sim, along="obs", n=2*nrow(prepost_data))
+power_curve <- powerCurve(model1_sim_extended, 
+                          fixed("time2:conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=200)
+
+pc_df <- as.data.frame(summary(power_curve))
+pa <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Cynicism Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.1",
+    x = "Number of Participants",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+fixef(model1_sim)["time2:conditionincentives"] <- 0.3
+model1_sim_extended <- extend(model1_sim, along="obs", n=2*nrow(prepost_data))
+power_curve <- powerCurve(model1_sim_extended, 
+                          fixed("time2:conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=200)
+
+pc_df <- as.data.frame(summary(power_curve))
+pb <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Cynicism Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.3",
+    x = "Number of Participants",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+p <- grid.arrange(pa, pb, nrow = 1)
+ggsave("../output/power_curves_cynicism_random.pdf", p, width=12, height=5)
+```
+
+
 
 ## Political Variable Change between Active vs. Passive
 ```{r, fig.width=10, fig.height=4}

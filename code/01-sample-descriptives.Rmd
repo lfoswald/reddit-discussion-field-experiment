@@ -696,6 +696,78 @@ knowledge
 ggsave("../output/knowledge_matrix.pdf", knowledge, width = 10 , height = 8)
 ```
 
+### alternative issue attitude plot
+
+```{r}
+label_map <- c(
+  loan         = "Government forgiveness of student loan debt",
+  airbnb       = "Regulation of Airbnb in cities",
+  minwage      = "Federal minimum wage increase",
+  ukraine      = "US financial and military aid to Ukraine",
+  ubi          = "Economic impact of universal basic income",
+  climate      = "Climate change and environmental threats",
+  fur          = "Ban on fur clothing",
+  renewable    = "Government investment in renewable energy",
+  gaza         = "US foreign policy toward Israel and Gaza",
+  vegetarian   = "Vegetarian food policies in public cantines",
+  gender       = "Use of gender-neutral language and pronouns",
+  sexwork      = "Legality of prostitution",
+  vaccine      = "Mandatory vaccination policies by employers",
+  healthcare   = "Universal healthcare responsibility",
+  immigration  = "Immigration regulation",
+  guns         = "Gun control laws",
+  deathpenalty = "Death penalty reestablishment in the US",
+  bodycams     = "Police accountability and body cameras",
+  ai           = "Artificial intelligence replacing human labor",
+  socialmedia  = "Impact of social media on democracy"
+)
+
+short_names <- sample %>%
+  dplyr::select(issue_attitudes_loan:issue_attitudes_socialmedia) %>%
+  names() %>%
+  sub("^issue_attitudes_", "", .)
+
+issues <- unname(label_map[short_names])
+
+attitudes_long <- sample %>%
+  dplyr::select(subreddit,issue_attitudes_loan:issue_attitudes_socialmedia) %>%
+  setNames(c("subreddit", short_names)) %>%
+  pivot_longer(cols = -subreddit, names_to = "Variable", values_to = "Attitude") %>%
+  mutate(Attitude = as.numeric(as.character(Attitude))) %>%
+  filter(!is.na(Attitude)) %>%
+  mutate(Issue = factor(Variable, levels = short_names, labels = issues))
+
+# Reorder issues based on homogeneity
+issue_stats <- attitudes_long %>%
+  group_by(Issue) %>%
+  summarise(SD = sd(Attitude, na.rm = TRUE),
+            Mean = mean(Attitude, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(SD)  # low SD = high homogeneity
+
+attitudes_long <- attitudes_long %>%
+  mutate(Issue = factor(Issue, levels = issue_stats$Issue))
+
+issue_colors <- setNames(colour_values[seq_along(rev(issue_stats$Issue))], 
+                         issue_stats$Issue)
+
+attitudes_ridge <- ggplot(attitudes_long, 
+                          aes(x = Attitude, y = fct_rev(Issue), fill = fct_rev(Issue), linetype = subreddit)) +
+  geom_density_ridges(alpha = 0.2, scale = 1.2, rel_min_height = 0.01) +
+  theme_ridges() +
+  scale_fill_manual(values = colour_values) +
+  guides(fill = "none") +
+  xlab("1: Strongly disagree - 6: Strongly agree") +
+  ylab("") +
+  ggtitle("Pre-Treatment Issue Attitudes") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+attitudes_ridge
+
+ggsave("../output/attitudes_ridges.pdf", attitudes_ridge, width = 12, height = 7)
+
+```
 
 ```{r, fig.width=7, fig.height=7}
 ## issue attitudes 

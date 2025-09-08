@@ -733,6 +733,71 @@ ggsave("../output/comment_plot_pred_poisson.pdf", comment_plot_pred_active, widt
 ```
 
 
+### Manual poisson models for count data (including incactive)
+```{r}
+#present_sample <- scaled_sample%>%filter(active == 1)
+
+models <- list(
+  glm(comment_count ~ gender_male, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ age, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ education, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ comments_online_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ comment_karma, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ leftright_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ polinterest_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ affective_polarization_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_1_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_2_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_3_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ trust_general_4_w1, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_issue_distance_abs, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_group_respectful, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_group_knowledgeable, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_group_polarized, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_discussion_enjoyable, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_discussion_toxic, family = poisson(link = "log"), data = present_sample),
+  glm(comment_count ~ mean_discussion_constructive, family = poisson(link = "log"), data = present_sample)
+)
+
+model_frames <- list()
+
+for (i in seq_along(models)) {
+  model_summary <- summary(models[[i]])
+    model_frames[[i]] <- data.frame(
+    Coefficient = model_summary$coef[-1, 1],        
+    pval = model_summary$coef[-1, 4],               
+    SE = model_summary$coef[-1, 2],                 
+    Predictor = predictors[i]                       
+  )
+}
+
+
+combined_df <- do.call(rbind, model_frames)
+combined_df <- combined_df %>%
+  mutate(Predictor = fct_inorder(rev(Predictor)))
+
+comment_plot_pred_active <- ggplot(combined_df, aes(x = rev(Predictor), alpha = abs(Coefficient))) + 
+  geom_hline(yintercept = 0, colour = gray(1 / 2), lty = 2) + 
+  geom_pointrange(aes(y = Coefficient, ymin = Coefficient - SE * interval2,
+                      ymax = Coefficient + SE * interval2), colour = "black",
+                  lwd = 1 , position = position_dodge(width = 2 / 3)) + 
+  guides(alpha = "none") +
+  theme_bw(base_size = 10) + 
+  coord_flip() +
+  ggtitle("Comment activity", subtitle = "Poisson prediction of comment count incl. inactive") +
+  xlab("") +
+  ylab("Change in log number of comments")+
+  theme(#panel.grid.major = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())  
+comment_plot_pred_active
+
+ggsave("../output/comment_plot_pred_poisson_incl0.pdf", comment_plot_pred_active, width = 5, height = 4)
+```
+
+
+
+
 ### Manual poisson models for count data (active only) - Random Effects 
 ```{r}
 

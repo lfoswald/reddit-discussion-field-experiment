@@ -24,6 +24,7 @@ library(purrr)
 library(tableone)
 library(pscl)
 library(ggcorrplot)
+library(simr)
 ```
 
 Import data 
@@ -212,15 +213,24 @@ toxicity <- ggplot(discussion_data, aes(comment_toxicity, colour = condition, fi
 
 # linear model 
 tox_model <- lm_robust(comment_toxicity ~ condition, data = discussion_data)
+# clustered SEs
+tox_model_clustered <- lm_robust(comment_toxicity ~ condition, data = discussion_data, clusters = subreddit)
 # robustness check
 tox_model2 <- lmer(comment_toxicity ~ condition + (1 | subreddit), data = discussion_data)
 tox_model3 <- lmer(comment_toxicity ~ condition + (1 + condition | subreddit), data = discussion_data)
+tox_model4 <- lmer(comment_toxicity ~ condition + (1 + condition | subreddit) + (1 | ParticipantID), data = discussion_data)
 
+
+### plot 
 tox_model_tidy <- broom::tidy(tox_model, conf.int = TRUE, conf.level = 0.95)%>%
   mutate(term = factor(c("intercept","incentives","moderation")))%>%
   filter(term != "intercept")
 
-  
+tox_model_tidy_clustered <- broom::tidy(tox_model_clustered, conf.int = TRUE, conf.level = 0.95)%>%
+  mutate(term = factor(c("intercept","incentives","moderation")))%>%
+  filter(term != "intercept")
+
+
 tox_plot <- ggplot(tox_model_tidy, aes(x = estimate, y = term, color = term)) +
   geom_point(size = 7) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
@@ -236,10 +246,176 @@ tox_plot <- ggplot(tox_model_tidy, aes(x = estimate, y = term, color = term)) +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
 
+  
+tox_plot_clustered <- ggplot(tox_model_tidy_clustered, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("Linear model, clustered SEs, 95% CI") +
+  ggtitle("Comment toxicity by condition") +
+  scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#C5701A"),
+                     labels = c("moderation" = "Moderation", "incentives" = "Incentives")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
+tox_model_tidy_fixed <- broom.mixed::tidy(tox_model2, conf.int = TRUE, conf.level = 0.95) %>%
+  filter(effect == "fixed", term != "(Intercept)") %>%
+  mutate(term = recode(term,
+                       "conditionincentives" = "Incentives",
+                       "conditionmoderation" = "Moderation"))
+
+
+tox_plot_fixed <- ggplot(tox_model_tidy_fixed, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ggtitle("Comment toxicity by condition") +
+  scale_color_manual(values = c("Moderation" = "#6699FF", "Incentives" = "#C5701A")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
+tox_model_tidy_mixed <- broom.mixed::tidy(tox_model3, conf.int = TRUE, conf.level = 0.95) %>%
+  filter(effect == "fixed", term != "(Intercept)") %>%
+  mutate(term = recode(term,
+                       "conditionincentives" = "Incentives",
+                       "conditionmoderation" = "Moderation"))
+
+
+tox_plot_mixed <- ggplot(tox_model_tidy_mixed, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ggtitle("Comment toxicity by condition") +
+  scale_color_manual(values = c("Moderation" = "#6699FF", "Incentives" = "#C5701A")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
 combi2 <- grid.arrange(toxicity, tox_plot, widths = c(3,3))
 
 ggsave("../output/toxicity_experiment.pdf", combi2, width = 12, height = 4)
 ```
+```{}
+# power simulation fixed effects, moderation
+tox_model2_sim <- tox_model2
+discussion_data$obs <- 1:nrow(discussion_data)
+
+fixef(tox_model2_sim)["conditionmoderation"] <- 0.05
+tox_model2_extended <- extend(tox_model2_sim, along="obs", n=2*nrow(discussion_data))
+power_curve <- powerCurve(tox_model2_extended, 
+                          fixed("conditionmoderation", "t"), 
+                          along="obs", 
+                          nsim=100)
+
+pc_df <- as.data.frame(summary(power_curve))
+pa <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Toxicity Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.05",
+    x = "Number of Comments",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+# larger effect
+fixef(tox_model2_sim)["conditionmoderation"] <- 0.1
+tox_model2_extended <- extend(tox_model2_sim, along="obs", n=2*nrow(discussion_data))
+power_curve <- powerCurve(tox_model2_extended, 
+                          fixed("conditionmoderation", "t"), 
+                          along="obs", 
+                          nsim=100)
+
+pc_df <- as.data.frame(summary(power_curve))
+pb <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Toxicity Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.1",
+    x = "Number of Comments",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+p <- grid.arrange(pa, pb, nrow = 1)
+ggsave("../output/power_curves_fixed.pdf", p, width=12, height=5)
+
+```
+
+```{}
+# power simulation random effects, incentives
+tox_model2_sim <- tox_model3
+discussion_data$obs <- 1:nrow(discussion_data)
+
+fixef(tox_model2_sim)["conditionincentives"] <- 0.05
+tox_model2_extended <- extend(tox_model2_sim, along="obs", n=2*nrow(discussion_data))
+power_curve <- powerCurve(tox_model2_extended, 
+                          fixed("conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=100)
+
+pc_df <- as.data.frame(summary(power_curve))
+pa <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Toxicity Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.05",
+    x = "Number of Comments",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+# larger effect
+fixef(tox_model2_sim)["conditionincentives"] <- 0.1
+tox_model2_extended <- extend(tox_model2_sim, along="obs", n=2*nrow(discussion_data))
+power_curve <- powerCurve(tox_model2_extended, 
+                          fixed("conditionincentives", "t"), 
+                          along="obs", 
+                          nsim=100)
+
+pc_df <- as.data.frame(summary(power_curve))
+pb <- ggplot(pc_df, aes(x=nrow, y=mean)) +
+  geom_line(size=1, color="steelblue") +
+  geom_point(size=2, color="steelblue") +
+  geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.2, fill="steelblue") +
+  geom_hline(yintercept=0.8, linetype="dashed", color="red") +
+  labs(
+    title = "Power Curve for Toxicity Effects",
+    subtitle = "With 95% simulation-based confidence intervals; beta = 0.1",
+    x = "Number of Comments",
+    y = "Estimated Power"
+  ) +
+  theme_minimal(base_size = 13)
+
+p <- grid.arrange(pa, pb, nrow = 1)
+ggsave("../output/power_curves_random.pdf", p, width=12, height=5)
+```
+
 
 ## Toxicity and HTE
 ```{r, fig.width=10, fig.height=6}
@@ -338,9 +514,12 @@ length <- ggplot(discussion_data, aes(length_comment_char, colour = condition, f
 
 # linear model 
 l_model <- lm_robust(length_comment_char ~ condition, data = discussion_data)
+# clustered model
+l_model_clustered <- lm_robust(length_comment_char ~ condition, data = discussion_data, clusters = subreddit)
 # robustness check
 l_model2 <- lmer(length_comment_char ~ condition + (1 | subreddit), data = discussion_data)
 l_model3 <- lmer(length_comment_char ~ condition + (1 + condition | subreddit), data = discussion_data)
+l_model4 <- lmer(length_comment_char ~ condition + (1 + condition | subreddit) + (1 | ParticipantID), data = discussion_data)
 
 l_model_tidy <- broom::tidy(l_model, conf.int = TRUE, conf.level = 0.95)%>%
   mutate(term = factor(c("intercept","incentives","moderation")))%>%
@@ -359,16 +538,82 @@ l_plot <- ggplot(l_model_tidy, aes(x = estimate, y = term, color = term)) +
   theme(axis.text=element_text(size=13),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
+
+l_model_tidy_clustered <- broom::tidy(l_model_clustered , conf.int = TRUE, conf.level = 0.95)%>%
+  mutate(term = factor(c("intercept","incentives","moderation")))%>%
+  filter(term != "intercept")
+
+l_plot_clustered  <- ggplot(l_model_tidy_clustered , aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("Linear model, clustered SE, 95% CI") +
+  ggtitle("Comment length by condition") +
+  scale_color_manual(values = c("moderation" = "#6699FF", "incentives" = "#C5701A")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+
+l_model_tidy_fixed <- broom.mixed::tidy(l_model2, conf.int = TRUE, conf.level = 0.95) %>%
+  filter(effect == "fixed", term != "(Intercept)") %>%
+  mutate(term = recode(term,
+                       "conditionincentives" = "Incentives",
+                       "conditionmoderation" = "Moderation"))
+
+l_plot_fixed <- ggplot(l_model_tidy_fixed, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ggtitle("Comment length by condition") +
+  scale_color_manual(values = c("Moderation" = "#6699FF", "Incentives" = "#C5701A")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
  
+
+ 
+l_model_tidy_mixed <- broom.mixed::tidy(l_model4, conf.int = TRUE, conf.level = 0.95) %>%
+  filter(effect == "fixed", term != "(Intercept)") %>%
+  mutate(term = recode(term,
+                       "conditionincentives" = "Incentives",
+                       "conditionmoderation" = "Moderation"))
+
+l_plot_mixed <- ggplot(l_model_tidy_mixed, aes(x = estimate, y = term, color = term)) +
+  geom_point(size = 7) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0, size = 2) +
+  geom_vline(xintercept = 0, colour = "black", linetype = 2) +
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ggtitle("Comment length by condition") +
+  scale_color_manual(values = c("Moderation" = "#6699FF", "Incentives" = "#C5701A")) +
+  guides(color = "none") +
+  ylab("")+
+  theme(axis.text=element_text(size=13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ 
+
 combi2 <- grid.arrange(length, l_plot, widths = c(3,3))
 
 ggsave("../output/length_experiment.pdf", combi2, width = 12, height = 4)
 
 combi_plot <- grid.arrange(tox_plot, l_plot, nrow = 1)
-#combi_plot2 <- grid.arrange(tox_plot, l_plot, nrow = 2)
+combi_plot2 <- grid.arrange(tox_plot_clustered, l_plot_clustered, nrow = 1)
+combi_plot3 <- grid.arrange(tox_plot_mixed, l_plot_mixed, nrow = 1)
+combi_plot4 <- grid.arrange(tox_plot_fixed, l_plot_fixed, nrow = 1)
 
 ggsave("../output/length_toxicity_coefficients.pdf", combi_plot, width = 9, height = 3)
-#ggsave("../output/length_toxicity_coefficients2.pdf", combi_plot2, width = 4, height = 4)
+ggsave("../output/length_toxicity_coefficients_fixed.pdf", combi_plot4, width = 9, height = 3)
+ggsave("../output/length_toxicity_coefficients_random.pdf", combi_plot3, width = 9, height = 3)
+ggsave("../output/length_toxicity_coefficients_clustered.pdf", combi_plot2, width = 9, height = 3)
 ```
 
 ## Polarization deltas
